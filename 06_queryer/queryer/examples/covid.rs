@@ -5,7 +5,8 @@ use queryer::query;
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
-    let url = "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/latest/owid-covid-latest.csv";
+    // let url = "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/latest/owid-covid-latest.csv";
+    let url = "file:///Users/steve/build/geektime-rust-jchen/06_queryer/queryer/fixtures/owid-covid-latest.csv";
 
     // 使用 sql 从 URL 里获取数据
     let sql = format!(

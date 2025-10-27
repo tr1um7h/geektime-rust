@@ -36,10 +36,10 @@ impl DerefMut for DataSet {
 
 impl DataSet {
     /// 从 DataSet 转换成 csv
-    pub fn to_csv(&self) -> Result<String> {
+    pub fn to_csv(&mut self) -> Result<String> {
         let mut buf = Vec::new();
-        let writer = CsvWriter::new(&mut buf);
-        writer.finish(self)?;
+        let mut writer = CsvWriter::new(&mut buf);
+        writer.finish(self.deref_mut())?;
         Ok(String::from_utf8(buf)?)
     }
 }
@@ -73,12 +73,20 @@ pub async fn query<T: AsRef<str>>(sql: T) -> Result<DataSet> {
         None => ds.0.lazy(),
     };
 
-    filtered = order_by
-        .into_iter()
-        .fold(filtered, |acc, (col, desc)| acc.sort(&col, desc));
+    filtered = order_by.into_iter().fold(filtered, |acc, (col, desc)| {
+        acc.sort(
+            &col,
+            SortOptions {
+                descending: desc,
+                nulls_last: true,
+                multithreaded: false,
+                maintain_order: false,
+            },
+        )
+    });
 
     if offset.is_some() || limit.is_some() {
-        filtered = filtered.slice(offset.unwrap_or(0), limit.unwrap_or(usize::MAX));
+        filtered = filtered.slice(offset.unwrap_or(0), limit.unwrap_or(usize::MAX) as _);
     }
 
     Ok(DataSet(filtered.select(selection).collect()?))
