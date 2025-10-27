@@ -10,7 +10,7 @@ fn example_sql() -> String {
 
 #[tauri::command]
 async fn query(sql: String) -> Result<String, String> {
-  let data = queryer::query(&sql).await.map_err(|err| err.to_string())?;
+  let mut data = queryer::query(&sql).await.map_err(|err| err.to_string())?;
   Ok(data.to_csv().map_err(|err| err.to_string())?)
 }
 
