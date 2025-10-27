@@ -39,7 +39,7 @@ impl DataSet {
     pub fn to_csv(&mut self) -> Result<String> {
         let mut buf = Vec::new();
         let mut writer = CsvWriter::new(&mut buf);
-        writer.finish(self.deref_mut())?;
+        writer.finish(self)?;
         Ok(String::from_utf8(buf)?)
     }
 }

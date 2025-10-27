@@ -20,11 +20,12 @@ impl Dialect for TyrDialect {
 
 /// 测试辅助函数
 pub fn example_sql() -> String {
-    let url = "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/latest/owid-covid-latest.csv";
+    // let url = "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/latest/owid-covid-latest.csv";
+    let url = "file:///Users/steve/build/geektime-rust-jchen/06_queryer/queryer/fixtures/owid-covid-latest.csv";
 
     let sql = format!(
         "SELECT location name, total_cases, new_cases, total_deaths, new_deaths \
-        FROM {} where new_deaths >= 500 ORDER BY new_cases DESC LIMIT 6 OFFSET 5",
+        FROM {} where new_deaths >= 500 ORDER BY new_cases DESC",
         url
     );
 

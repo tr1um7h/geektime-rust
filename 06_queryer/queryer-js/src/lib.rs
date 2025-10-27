@@ -11,7 +11,7 @@ fn query(mut cx: FunctionContext) -> JsResult<JsString> {
         Err(_) => "csv".to_string(),
     };
     let rt = tokio::runtime::Runtime::new().unwrap();
-    let data = rt.block_on(async { queryer::query(sql).await.unwrap() });
+    let mut data = rt.block_on(async { queryer::query(sql).await.unwrap() });
 
     match output.as_str() {
         "csv" => Ok(cx.string(data.to_csv().unwrap())),
