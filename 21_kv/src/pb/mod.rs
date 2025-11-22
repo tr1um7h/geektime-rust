@@ -34,6 +34,24 @@ impl CommandRequest {
             })),
         }
     }
+
+    pub fn new_hmget(table: impl Into<String>, keys: impl Into<Vec<String>>) -> Self {
+        Self {
+            request_data: Some(RequestData::Hmget(Hmget {
+                table: table.into(),
+                keys: keys.into(),
+            })),
+        }
+    }
+
+    pub fn new_hmset(table: impl Into<String>, pairs: Vec<Kvpair>) -> Self {
+        Self {
+            request_data: Some(RequestData::Hmset(Hmset {
+                table: table.into(),
+                pairs: pairs,
+            })),
+        }
+    }
 }
 
 impl Kvpair {
@@ -90,6 +108,17 @@ impl From<Vec<Kvpair>> for CommandResponse {
         Self {
             status: StatusCode::OK.as_u16() as _,
             pairs: v,
+            ..Default::default()
+        }
+    }
+}
+
+/// 从 Vec<Value> 转换成 CommandResponse
+impl From<Vec<Value>> for CommandResponse {
+    fn from(v: Vec<Value>) -> Self {
+        Self {
+            status: StatusCode::OK.as_u16() as _,
+            values: v,
             ..Default::default()
         }
     }
