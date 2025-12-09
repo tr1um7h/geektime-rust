@@ -1,3 +1,5 @@
+// jchen: write lib.rs for call FFI bindings later.
+
 // 生成的 bindings 代码根据 C/C++ 代码生成，里面有一些
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
@@ -18,6 +20,7 @@ pub fn compress(input: &[u8]) -> Result<Vec<u8>> {
     unsafe {
         let mut stream: bz_stream = mem::zeroed();
         let result = BZ2_bzCompressInit(&mut stream as *mut _, 1, 0, 0);
+        // handle error for C
         if result != BZ_OK as _ {
             return Err(anyhow!("Failed to initialize"));
         }
