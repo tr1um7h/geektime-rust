@@ -2,10 +2,13 @@ use pyo3::{exceptions, prelude::*};
 use std::{fs, str::FromStr};
 use xunmi::{self as x};
 
+use pyo3::types::{PyDict, PyTuple};
+
 pub(crate) fn to_pyerr<E: ToString>(err: E) -> PyErr {
     exceptions::PyValueError::new_err(err.to_string())
 }
 
+// 把这几个类注册
 #[pyclass]
 pub struct Indexer(x::Indexer);
 
@@ -107,10 +110,40 @@ impl InputConfig {
     }
 }
 
+#[pyclass]
+struct MyClass {}
+
+#[pymethods]
+impl MyClass {
+    #[staticmethod]
+    #[args(kwargs = "**")]
+    fn test1(kwargs: Option<&PyDict>) -> PyResult<()> {
+        if let Some(kwargs) = kwargs {
+            for kwarg in kwargs {
+                println!("{:?}", kwarg);
+            }
+        } else {
+            println!("kwargs is none");
+        }
+        Ok(())
+    }
+
+    #[staticmethod]
+    #[args(args = "*")]
+    fn test2(args: &PyTuple) -> PyResult<()> {
+        for arg in args {
+            println!("{:?}", arg);
+        }
+        Ok(())
+    }
+}
+
+// 引入到模块中
 #[pymodule]
 fn xunmi(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Indexer>()?;
     m.add_class::<InputConfig>()?;
     m.add_class::<IndexUpdater>()?;
+    m.add_class::<MyClass>()?;
     Ok(())
 }
