@@ -20,7 +20,7 @@ fn main() {
         // 通知主线程
         cvar.notify_one();
         loop {
-            thread::sleep(Duration::from_secs(1));
+            thread::sleep(Duration::from_secs(3));
             println!("working...");
         }
     });
@@ -34,5 +34,5 @@ fn main() {
     eprintln!("Worker started!");
 
     // 等待 worker 线程
-    thread::sleep(Duration::from_secs(3600));
+    thread::sleep(Duration::from_secs(10));
 }

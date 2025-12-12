@@ -18,6 +18,7 @@ enum OutMsg {
 // Actor
 struct DummyActor;
 
+// 有栈协程：每个 Actor 有自己的一个独立的、轻量级的调用栈
 impl Actor for DummyActor {
     type Context = Context<Self>;
 }
