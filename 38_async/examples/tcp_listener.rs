@@ -18,6 +18,7 @@ async fn main() -> Result<()> {
             let (mut w, mut r) = framed.split();
             while let Some(Ok(line)) = r.next().await {
                 // 每读到一行就加个前缀发回
+                // use tool `nc 127.0.0.1 8080` in mac
                 w.send(format!("I got: {}", line)).await?;
             }
             Ok::<_, anyhow::Error>(())
