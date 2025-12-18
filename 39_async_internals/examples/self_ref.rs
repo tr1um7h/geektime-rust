@@ -27,16 +27,23 @@ impl SelfReference {
             // 在使用 ptr 是需要 unsafe
             // SAFETY: 这里 name_ptr 潜在不安全，会指向旧的位置
             unsafe { &*self.name_ptr },
+            // "unsafe self.name_ptr",
         );
     }
 }
 
 fn main() {
+    // eg.1
     let data = move_creates_issue();
     println!("data: {:?}", data);
-    // 如果把下面这句注释掉，程序运行会直接 segment error
-    // data.print_name();
+    // 如果把下面这句注释解开掉，程序运行会直接 segment error
+    // 因为它会解引用，访问 move 之前指向的地址
+    data.print_name();
     println!();
+}
+
+fn main2() {
+    // eg.2
     mem_swap_creates_issue();
 }
 

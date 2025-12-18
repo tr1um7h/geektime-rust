@@ -5,6 +5,7 @@ struct SelfReference {
     name: String,
     // 在初始化后指向 name
     name_ptr: *const String,
+    // 其实可以不加这个_marker, 但这个字段用于隐式声明 !Unpin. 提高可读性
     // PhantomPinned 占位符
     _marker: PhantomPinned,
 }
@@ -19,6 +20,7 @@ impl SelfReference {
     }
 
     pub fn init(self: Pin<&mut Self>) {
+        // 因为 Self 被 Pin 住了，所以需要用下面的方法
         let name_ptr = &self.name as *const String;
         // SAFETY: 这里并不会把任何数据从 &mut SelfReference 中移走
         let this = unsafe { self.get_unchecked_mut() };
@@ -53,6 +55,11 @@ fn move_creates_issue() {
 
     // 现在只能拿到 pinned 后的数据，所以 move 不了之前
     move_pinned(data.as_mut());
+
+    // Pin 住的无法 unpin
+    // move_it(data.get_mut());
+
+    // 所以这里引用的地址是不变的，但指针本身 &data 是变化的
     println!("{:?} ({:p})", data, &data);
 
     // 你无法拿回 Pin 之前的 SelfReference 结构，所以调用不了 move_it

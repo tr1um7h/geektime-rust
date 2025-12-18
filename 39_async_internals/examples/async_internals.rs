@@ -19,9 +19,19 @@ async fn write_hello_file_async(name: &str) -> anyhow::Result<()> {
 #[allow(dead_code)]
 enum WriteHelloFile {
     Init(String),
+    // Pin 拿住的是一个可以解引用成 T 的指针类型 P.
+    // 因为 Pin 的目的是，把 T 的内存位置锁住，从而避免移动后自引用类型带来的引用失效问题。
     AwaitingCreate(Pin<Box<dyn Future<Output = Result<fs::File, std::io::Error>>>>),
     AwaitingWrite(Pin<Box<dyn Future<Output = Result<(), std::io::Error>>>>),
+    // AwaitingWrite(AwaitingWriteData),
     Done,
+}
+
+// 自引用有一个很大的问题：一旦它被移动，原本的指针就会指向旧的地址。
+#[allow(dead_code)]
+struct AwaitingWriteData {
+    fut: Box<dyn Future<Output = Result<(), std::io::Error>>>,
+    file: fs::File,
 }
 
 #[allow(dead_code)]
