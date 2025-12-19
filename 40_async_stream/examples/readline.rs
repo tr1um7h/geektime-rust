@@ -10,6 +10,7 @@ use tokio::{
 };
 
 /// LineStream 内部使用 tokio::io::Lines
+// 可以使用 #[pin] 来声明某个字段在使用的时候需要被封装为 Pin
 #[pin_project]
 struct LineStream<R> {
     #[pin]
@@ -32,7 +33,9 @@ impl<R: AsyncRead> Stream for LineStream<R> {
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         self.project()
             .lines
-            .poll_next_line(cx)
+            // 虽然 Lines 结构提供了 next_line()，但并没有实现 Stream
+            .poll_next_line(cx) // Pin<&mut Self>
+            // Result<Option<T>> -> Option<Result<T>>
             .map(Result::transpose)
     }
 }

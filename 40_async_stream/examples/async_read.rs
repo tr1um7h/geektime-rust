@@ -28,6 +28,7 @@ impl AsyncRead for FileWrapper {
         cx: &mut Context<'_>,
         buf: &mut ReadBuf<'_>,
     ) -> Poll<std::io::Result<()>> {
+        // poll_read requires Pin<&mut Self>
         self.project().file.poll_read(cx, buf)
     }
 }

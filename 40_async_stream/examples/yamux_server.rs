@@ -25,6 +25,7 @@ async fn main() -> Result<()> {
         let _ctrl = conn.control();
         tokio::spawn(
             yamux::into_stream(conn).try_for_each_concurrent(None, move |s| async move {
+                // yamux::connection futures trait -> tokio trait
                 // 使用 compat() 方法把 futures AsyncRead/AsyncWrite 转换成 tokio 对应的 trait
                 let mut framed = Framed::new(s.compat(), LinesCodec::new());
                 while let Some(Ok(line)) = framed.next().await {

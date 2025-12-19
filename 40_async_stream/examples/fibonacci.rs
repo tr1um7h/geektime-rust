@@ -3,6 +3,7 @@ use std::task::Poll;
 
 #[tokio::main]
 async fn main() {
+    // create a stream of at most 10 items
     consume(fib().take(10)).await;
     consume(fib1(10)).await;
     // unfold 产生的 Unfold stream 没有实现 Unpin，所以我们将其 Pin<Box<T>> 一下，使其满足 consume 的接口
@@ -32,6 +33,7 @@ fn fib() -> impl Stream<Item = i32> {
 fn fib1(mut n: usize) -> impl Stream<Item = i32> {
     let mut a = 1;
     let mut b = 1;
+    // create a stream wrapping a function returing Poll<T>
     poll_fn(move |_cx| -> Poll<Option<i32>> {
         if n == 0 {
             return Poll::Ready(None);
@@ -45,6 +47,7 @@ fn fib1(mut n: usize) -> impl Stream<Item = i32> {
 }
 
 fn fib2(n: usize) -> impl Stream<Item = i32> {
+    // create a stream from (seed, closure)
     stream::unfold((n, (1, 1)), |(mut n, (a, b))| async move {
         if n == 0 {
             None

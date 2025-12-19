@@ -12,6 +12,7 @@ use tokio::{fs::File, io::AsyncWrite};
 struct FileSink {
     #[pin]
     file: File,
+    // 把传入的 item，写入 FileSink 的 BytesMut
     buf: BytesMut,
 }
 
@@ -24,6 +25,7 @@ impl FileSink {
     }
 }
 
+// jchen: impl Sink
 impl Sink<&str> for FileSink {
     type Error = std::io::Error;
 
@@ -31,6 +33,7 @@ impl Sink<&str> for FileSink {
         Poll::Ready(Ok(()))
     }
 
+    // Sink trait 的 Item 是 trait 的泛型参数，而不是关联类型
     fn start_send(self: Pin<&mut Self>, item: &str) -> Result<(), Self::Error> {
         let this = self.project();
         eprint!("{}", item);
@@ -39,7 +42,7 @@ impl Sink<&str> for FileSink {
     }
 
     fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-        // 如果想 project() 多次，需要先把 self reborrow 一下
+        // 这里调用 project() 多次，需要先把 self reborrow 一下
         let this = self.as_mut().project();
         let buf = this.buf.split_to(this.buf.len());
         if buf.is_empty() {

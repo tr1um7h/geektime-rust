@@ -23,6 +23,7 @@ async fn main() -> Result<()> {
         yamux::into_stream(conn).try_for_each_concurrent(None, |_stream| future::ready(Ok(()))),
     );
 
+    // yamux::connection futures trait -> tokio trait
     let stream = ctrl.open_stream().await?.compat();
     info!("Started a new stream");
     let mut framed = Framed::new(stream, LinesCodec::new());

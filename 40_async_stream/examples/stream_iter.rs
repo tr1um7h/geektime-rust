@@ -2,6 +2,15 @@ use futures::prelude::*;
 
 #[tokio::main]
 async fn main() {
+    // src/rust/library/core/src/iter/traits/iterator.rs
+    let mut it = (1..10).into_iter().filter(|x| x % 2 == 0).map(|x| x * x);
+    println!("Type of stream: {}", get_type_name(&it));
+    while let Some(x) = it.next() {
+        println!("Got item: {}", x);
+    }
+
+    // futures-util-0.3.31/src/stream/iter.rs
+    // futures-lite-1.13.0/src/stream.rs
     let mut st = stream::iter(1..10)
         .filter(|x| future::ready(x % 2 == 0))
         .map(|x| x * x);
