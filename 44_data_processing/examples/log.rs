@@ -62,6 +62,7 @@ impl NginxLog {
         let content = tokio::fs::read_to_string(schema_file).await?;
         let fields: SchemaFields = serde_yaml::from_str(&content)?;
         let schema = SchemaRef::from(fields);
+        println!("schema: {:?}", schema);
 
         let mut ctx = ExecutionContext::new();
         let options = CsvReadOptions::new()
