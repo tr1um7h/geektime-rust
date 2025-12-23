@@ -7,7 +7,7 @@ use std::{
     fs::File,
     io::{self, BufRead, BufReader, Write},
     ops::Range,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 mod error;
@@ -23,7 +23,7 @@ pub struct GrepConfig {
     /// 用于查找的正则表达式
     pattern: String,
     /// 文件通配符
-    glob: String,
+    glob: Vec<String>,
 }
 
 impl GrepConfig {
@@ -36,15 +36,23 @@ impl GrepConfig {
     pub fn match_with(&self, strategy: StrategyFn) -> Result<(), GrepError> {
         let regex = Regex::new(&self.pattern)?;
         // 生成所有符合通配符的文件列表
-        let files: Vec<_> = glob::glob(&self.glob)?.collect();
+        // glob 是 String 时调用方法：rgrep "vers*" "*.toml"
+        // let files: Vec<_> = glob::glob(&self.glob)?.collect();
+        let files = &self.glob;
+        println!("files: {:?}", files);
         // 并行处理所有文件
         files.into_par_iter().for_each(|v| {
-            if let Ok(filename) = v {
+            if let filename = v {
                 if let Ok(file) = File::open(&filename) {
                     let mut reader = BufReader::new(file);
                     let mut stdout = io::stdout();
 
-                    if let Err(e) = strategy(filename.as_path(), &mut reader, &regex, &mut stdout) {
+                    if let Err(e) = strategy(
+                        PathBuf::from(&filename).as_path(),
+                        &mut reader,
+                        &regex,
+                        &mut stdout,
+                    ) {
                         println!("Internal error: {:?}", e);
                     }
                 }
@@ -77,7 +85,7 @@ pub fn default_strategy(
         .join("\n");
 
     if !matches.is_empty() {
-        writer.write_all(path.display().to_string().green().as_bytes())?;
+        writer.write_fmt(format_args!("{}", path.display().to_string().green()))?;
         writer.write_all(b"\n")?;
         writer.write_all(matches.as_bytes())?;
         writer.write_all(b"\n")?;
@@ -129,7 +137,7 @@ mod tests {
         default_strategy(path, &mut reader, &pattern, &mut writer).unwrap();
         let result = String::from_utf8(writer).unwrap();
         let expected = [
-            String::from("src/main.rs"),
+            String::from("src/main.rs").green().to_string(),
             format_line("hello world!", 1, 0..5),
             format_line("hey Tyr!\n", 2, 0..3),
         ];
