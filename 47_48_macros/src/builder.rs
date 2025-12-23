@@ -6,6 +6,7 @@ use syn::{
 };
 
 /// 我们需要的描述一个字段的所有信息
+#[derive(Debug)]
 struct Fd {
     name: Ident,
     ty: Type,
@@ -22,6 +23,8 @@ pub struct BuilderContext {
 impl From<Field> for Fd {
     fn from(f: Field) -> Self {
         let (optional, ty) = get_option_inner(&f.ty);
+        // 拿到的是 TokenStream 里的结构
+        // println!("{:#?}", f);
         Self {
             // 此时，我们拿到的是 NamedFields，所以 ident 必然存在
             name: f.ident.unwrap(),
@@ -35,7 +38,7 @@ impl From<Field> for Fd {
 impl From<DeriveInput> for BuilderContext {
     fn from(input: DeriveInput) -> Self {
         let name = input.ident;
-
+        // 如果没有强大的模式匹配的支持，获取 FieldsNamed 会是非常冗长的代码。
         let fields = if let Data::Struct(DataStruct {
             fields: Fields::Named(FieldsNamed { named, .. }),
             ..
@@ -46,7 +49,8 @@ impl From<DeriveInput> for BuilderContext {
             panic!("Unsupported data type");
         };
 
-        let fds = fields.into_iter().map(Fd::from).collect();
+        let fds = fields.clone().into_iter().map(Fd::from).collect();
+        // println!("{}", quote! {#fields[0].ty});
         Self { name, fields: fds }
     }
 }
@@ -60,16 +64,18 @@ impl BuilderContext {
         let optionized_fields = self.gen_optionized_fields();
         let methods = self.gen_methods();
         let assigns = self.gen_assigns();
-
+        // println!("field: {:#?}", optionized_fields[0]);
         quote! {
             /// Builder 结构
             #[derive(Debug, Default)]
             struct #builder_name {
+                // field delare
                 #(#optionized_fields,)*
             }
 
             /// Builder 结构每个字段赋值的方法，以及 build() 方法
             impl #builder_name {
+                // Into
                 #(#methods)*
 
                 pub fn build(mut self) -> Result<#name, &'static str> {
@@ -146,12 +152,15 @@ fn get_option_inner(ty: &Type) -> (bool, &Type) {
                 // 如果 PathSegment 第一个是 Option，那么它内部应该是 AngleBracketed，比如 <T>
                 // 获取其第一个值，如果是 GenericArgument::Type，则返回
                 let t = match &v.arguments {
+                    // match args
                     syn::PathArguments::AngleBracketed(a) => match a.args.iter().next() {
+                        // 因为在 AngleBracketedGenericArguments 里，所以是 GenericArgument
                         Some(GenericArgument::Type(t)) => t,
                         _ => panic!("Not sure what to do with other GenericArgument"),
                     },
                     _ => panic!("Not sure what to do with other PathArguments"),
                 };
+                println!("{:#?}", t);
                 return (true, t);
             }
         }

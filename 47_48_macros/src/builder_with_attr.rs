@@ -7,6 +7,7 @@ use syn::{
 };
 
 /// 用于捕获每个字段的 attributes 的结构
+// 用 darling 解析每个attribute, 需要 FromField trait
 #[derive(Debug, Default, FromField)]
 #[darling(default, attributes(builder))]
 struct Opts {
@@ -15,6 +16,7 @@ struct Opts {
 }
 
 /// 我们需要的描述一个字段的所有信息
+#[derive(Debug)]
 struct Fd {
     name: Ident,
     ty: Type,
@@ -34,6 +36,7 @@ impl From<Field> for Fd {
         let (optional, ty) = get_option_inner(&f.ty);
         // 从 Field 中读取 attributes 生成 Opts，如果没有使用缺省值
         let opts = Opts::from_field(&f).unwrap_or_default();
+        // println!("{:#?}", opts);
         Self {
             opts,
             // 此时，我们拿到的是 NamedFields，所以 ident 必然存在
@@ -73,6 +76,9 @@ impl BuilderContext {
         let optionized_fields = self.gen_optionized_fields();
         let methods = self.gen_methods();
         let assigns = self.gen_assigns();
+
+        // jchen
+        // println!("fds: {:#?}", self.fields);
 
         quote! {
             /// Builder 结构
@@ -120,6 +126,11 @@ impl BuilderContext {
                 let ty = &f.ty;
                 // 如果不是 Option 类型，且定义了 each attribute
                 if !f.optional && f.opts.each.is_some() {
+                    println!("{:?}, {:?}", f.opts.each, name);
+                    // Rust 有一个重要的特性叫"卫生宏系统"（hygienic macro system）。这意味着宏展开时：
+                    // * 宏内部定义的变量不会意外地与外部变量冲突
+                    // * 宏使用的标识符不会意外捕获外部变量
+                    // * 这避免了 C/C++ 中常见的宏命名冲突问题
                     let each = Ident::new(f.opts.each.as_deref().unwrap(), name.span());
                     let (is_vec, ty) = get_vec_inner(ty);
                     if is_vec {

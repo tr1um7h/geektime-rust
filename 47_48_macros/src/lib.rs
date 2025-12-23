@@ -16,18 +16,23 @@ pub fn query(input: TokenStream) -> TokenStream {
 
 #[proc_macro_derive(RawBuilder)]
 pub fn derive_raw_builder(input: TokenStream) -> TokenStream {
+    // jchen: print TokenStream
+    println!("{:#?}", input);
+    // render by tempalte j2
     BuilderContext::render(input).unwrap().parse().unwrap()
 }
 
 #[proc_macro_derive(Builder)]
 pub fn derive_builder(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
+    // println!("{:#?}", input);
     builder::BuilderContext::from(input).render().into()
 }
 
 #[proc_macro_derive(BuilderWithAttr, attributes(builder))]
 pub fn derive_builder_with_attr(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
+    // string -> DeriveInput -> BuilderContext -> ProcMacro2 -> ProcMacro
     builder_with_attr::BuilderContext::from(input)
         .render()
         .into()
