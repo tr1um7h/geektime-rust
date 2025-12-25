@@ -196,49 +196,50 @@ impl From<f64> for Value {
     }
 }
 
-impl TryFrom<Value> for i64 {
-    type Error = KvError;
+// 这些可能是之前引入sled时测试用的
+// impl TryFrom<Value> for i64 {
+//     type Error = KvError;
 
-    fn try_from(v: Value) -> Result<Self, Self::Error> {
-        match v.value {
-            Some(value::Value::Integer(i)) => Ok(i),
-            _ => Err(KvError::ConvertError(v, "Integer")),
-        }
-    }
-}
+//     fn try_from(v: Value) -> Result<Self, Self::Error> {
+//         match v.value {
+//             Some(value::Value::Integer(i)) => Ok(i),
+//             _ => Err(KvError::ConvertError(v, "Integer")),
+//         }
+//     }
+// }
 
-impl TryFrom<Value> for f64 {
-    type Error = KvError;
+// impl TryFrom<Value> for f64 {
+//     type Error = KvError;
 
-    fn try_from(v: Value) -> Result<Self, Self::Error> {
-        match v.value {
-            Some(value::Value::Float(f)) => Ok(f),
-            _ => Err(KvError::ConvertError(v, "Float")),
-        }
-    }
-}
+//     fn try_from(v: Value) -> Result<Self, Self::Error> {
+//         match v.value {
+//             Some(value::Value::Float(f)) => Ok(f),
+//             _ => Err(KvError::ConvertError(v, "Float")),
+//         }
+//     }
+// }
 
-impl TryFrom<Value> for Bytes {
-    type Error = KvError;
+// impl TryFrom<Value> for Bytes {
+//     type Error = KvError;
 
-    fn try_from(v: Value) -> Result<Self, Self::Error> {
-        match v.value {
-            Some(value::Value::Binary(b)) => Ok(b),
-            _ => Err(KvError::ConvertError(v, "Binary")),
-        }
-    }
-}
+//     fn try_from(v: Value) -> Result<Self, Self::Error> {
+//         match v.value {
+//             Some(value::Value::Binary(b)) => Ok(b),
+//             _ => Err(KvError::ConvertError(v, "Binary")),
+//         }
+//     }
+// }
 
-impl TryFrom<Value> for bool {
-    type Error = KvError;
+// impl TryFrom<Value> for bool {
+//     type Error = KvError;
 
-    fn try_from(v: Value) -> Result<Self, Self::Error> {
-        match v.value {
-            Some(value::Value::Bool(b)) => Ok(b),
-            _ => Err(KvError::ConvertError(v, "Boolean")),
-        }
-    }
-}
+//     fn try_from(v: Value) -> Result<Self, Self::Error> {
+//         match v.value {
+//             Some(value::Value::Bool(b)) => Ok(b),
+//             _ => Err(KvError::ConvertError(v, "Boolean")),
+//         }
+//     }
+// }
 
 impl TryFrom<Value> for Vec<u8> {
     type Error = KvError;

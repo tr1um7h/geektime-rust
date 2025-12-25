@@ -9,9 +9,13 @@ use tracing::info;
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
     let service: Service<SledDb> = ServiceInner::new(SledDb::new("/tmp/kvserver"))
-        .fn_before_send(|res| match res.message.as_ref() {
-            "" => res.message = "altered. Original message is empty.".into(),
-            s => res.message = format!("altered: {}", s),
+        // 演示每次修改 message 字段
+        .fn_before_send(|res| {
+            match res.message.as_ref() {
+                "" => res.message = "altered. Original message is empty.".into(),
+                s => res.message = format!("altered: {}", s),
+            }
+            Ok(())
         })
         .into();
     let addr = "127.0.0.1:9527";
@@ -27,7 +31,7 @@ async fn main() -> Result<()> {
             while let Some(Ok(cmd)) = stream.next().await {
                 info!("Got a new command: {:?}", cmd);
                 let res = svc.execute(cmd);
-                stream.send(res).await.unwrap();
+                stream.send(res.unwrap()).await.unwrap();
             }
             info!("Client {:?} disconnected", addr);
         });

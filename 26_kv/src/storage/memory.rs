@@ -62,11 +62,13 @@ impl Storage for MemTable {
     fn get_iter(&self, table: &str) -> Result<Box<dyn Iterator<Item = Kvpair>>, KvError> {
         // 使用 clone() 来获取 table 的 snapshot
         let table = self.get_or_create_table(table).clone();
+        // let iter = table.into_iter().map(|v| v.into());
         let iter = StorageIter::new(table.into_iter());
         Ok(Box::new(iter))
     }
 }
 
+// 这里实现 Iter 时 data -> Kvpair 的转换
 impl From<(String, Value)> for Kvpair {
     fn from(data: (String, Value)) -> Self {
         Kvpair::new(data.0, data.1)

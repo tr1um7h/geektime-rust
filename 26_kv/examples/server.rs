@@ -22,7 +22,7 @@ async fn main() -> Result<()> {
             while let Some(Ok(cmd)) = stream.next().await {
                 info!("Got a new command: {:?}", cmd);
                 let res = svc.execute(cmd);
-                stream.send(res).await.unwrap();
+                stream.send(res.unwrap()).await.unwrap();
             }
             info!("Client {:?} disconnected", addr);
         });
