@@ -6,6 +6,7 @@ use tracing::info;
 
 use crate::{CommandRequest, CommandResponse, KvError, Service};
 
+// jchen: 封装网络接口（隐藏底层编解码调用）
 /// 处理服务器端的某个 accept 下来的 socket 的读写
 pub struct ProstServerStream<S> {
     inner: S,
@@ -41,7 +42,9 @@ where
     async fn send(&mut self, msg: CommandResponse) -> Result<(), KvError> {
         let mut buf = BytesMut::new();
         msg.encode_frame(&mut buf)?;
+        // convert to immutable
         let encoded = buf.freeze();
+        // stream write
         self.inner.write_all(&encoded[..]).await?;
         Ok(())
     }
@@ -49,7 +52,9 @@ where
     async fn recv(&mut self) -> Result<CommandRequest, KvError> {
         let mut buf = BytesMut::new();
         let stream = &mut self.inner;
+        // read stream into buf
         read_frame(stream, &mut buf).await?;
+        // 函数的返回值直接作为返回值
         CommandRequest::decode_frame(&mut buf)
     }
 }

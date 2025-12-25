@@ -8,7 +8,7 @@ use tokio::io::{AsyncRead, AsyncReadExt};
 use tracing::debug;
 
 /// 长度整个占用 4 个字节
-pub const LEN_LEN: usize = 4;
+pub const HDR_LEN: usize = 4;
 /// 长度占 31 bit，所以最大的 frame 是 2G
 const MAX_FRAME: usize = 2 * 1024 * 1024 * 1024;
 /// 如果 payload 超过了 1436 字节，就做压缩
@@ -38,7 +38,7 @@ where
 
             // BytesMut 支持逻辑上的 split（之后还能 unsplit）
             // 所以我们先把长度这 4 字节拿走，清除
-            let payload = buf.split_off(LEN_LEN);
+            let payload = buf.split_off(HDR_LEN);
             buf.clear();
 
             // 处理 gzip 压缩，具体可以参考 flate2 文档
@@ -72,10 +72,11 @@ where
             // 解压缩
             let mut decoder = GzDecoder::new(&buf[..len]);
             let mut buf1 = Vec::with_capacity(len * 2);
+            // 解压到新缓冲区
             decoder.read_to_end(&mut buf1)?;
             buf.advance(len);
 
-            // decode 成相应的消息
+            // decode 成相应的消息，并返回
             Ok(Self::decode(&buf1[..buf1.len()])?)
         } else {
             let msg = Self::decode(&buf[..len])?;
@@ -85,6 +86,7 @@ where
     }
 }
 
+// Message 是通用的，能同时支持以下消息
 impl FrameCoder for CommandRequest {}
 impl FrameCoder for CommandResponse {}
 
@@ -102,13 +104,15 @@ where
     let header = stream.read_u32().await? as usize;
     let (len, _compressed) = decode_header(header);
     // 如果没有这么大的内存，就分配至少一个 frame 的内存，保证它可用
-    buf.reserve(LEN_LEN + len);
+    buf.reserve(HDR_LEN + len);
+    // write HDR_LEN and advance
     buf.put_u32(header as _);
     // advance_mut 是 unsafe 的原因是，从当前位置 pos 到 pos + len，
     // 这段内存目前没有初始化。我们就是为了 reserve 这段内存，然后从 stream
     // 里读取，读取完，它就是初始化的。所以，我们这么用是安全的
     unsafe { buf.advance_mut(len) };
-    stream.read_exact(&mut buf[LEN_LEN..]).await?;
+    // copy stream -> buf
+    stream.read_exact(&mut buf[HDR_LEN..]).await?;
     Ok(())
 }
 
@@ -126,6 +130,7 @@ mod tests {
         fn poll_read(
             self: std::pin::Pin<&mut Self>,
             _cx: &mut std::task::Context<'_>,
+            // [out] ReadBuf
             buf: &mut tokio::io::ReadBuf<'_>,
         ) -> std::task::Poll<std::io::Result<()>> {
             // 看看 ReadBuf 需要多大的数据
@@ -191,6 +196,7 @@ mod tests {
         let mut buf = BytesMut::new();
         let cmd = CommandRequest::new_hdel("t1", "k1");
         cmd.encode_frame(&mut buf).unwrap();
+        // mock stream
         let mut stream = DummyStream { buf };
 
         let mut data = BytesMut::new();

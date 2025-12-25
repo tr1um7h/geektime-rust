@@ -24,7 +24,7 @@ sled = "0.34" # sled db
 thiserror = "1" # 错误定义和处理
 tokio = { version = "1", features = ["full" ] } # 异步网络库
 tracing = "0.1" # 日志处理
-tracing-subscriber = "0.2" # 日志处理
+tracing-subscriber = "0.3.22" # 日志处理
 
 [dev-dependencies]
 async-prost = "0.2.1" # 支持把 protobuf 封装成 TCP frame
