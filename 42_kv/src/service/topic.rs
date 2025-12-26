@@ -100,6 +100,7 @@ impl Topic for Arc<Broadcaster> {
                 }
             }
 
+            // 对中断连接的 client 取消订阅
             for id in ids {
                 self.remove_subscription(name.clone(), id);
             }

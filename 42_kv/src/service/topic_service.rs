@@ -14,6 +14,7 @@ pub trait TopicService {
 impl TopicService for Subscribe {
     fn execute(self, topic: impl Topic) -> StreamingResponse {
         let rx = topic.subscribe(self.topic);
+        // create a stream wraps a channel
         Box::pin(ReceiverStream::new(rx))
     }
 }
@@ -24,6 +25,7 @@ impl TopicService for Unsubscribe {
             Ok(_) => CommandResponse::ok(),
             Err(e) => e.into(),
         };
+        // create a stream of a single eletment
         Box::pin(stream::once(async { Arc::new(res) }))
     }
 }
@@ -68,6 +70,7 @@ mod tests {
             let cmd = CommandRequest::new_subscribe("lobby");
             let mut res = dispatch_stream(cmd, topic.clone());
             let id = get_id(&mut res).await;
+            // 释放这个 client rx
             drop(res);
             id as u32
         };

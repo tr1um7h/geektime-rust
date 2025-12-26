@@ -117,6 +117,7 @@ impl<Store: Storage> Service<Store> {
         self.inner.on_received.notify(&cmd);
         let mut res = dispatch(cmd.clone(), &self.inner.store);
 
+        // 如果match不上，不是之前那边处理，走pubsub
         if res == CommandResponse::default() {
             dispatch_stream(cmd, Arc::clone(&self.broadcaster))
         } else {

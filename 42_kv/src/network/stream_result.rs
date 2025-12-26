@@ -8,6 +8,7 @@ use futures::{Stream, StreamExt};
 
 use crate::{CommandResponse, KvError};
 
+// 帮助客户端更好地使用 execute_streaming() 接口
 /// 创建时之间取得 subscription id，并使用 Deref/DerefMut 使其用起来和 Stream 一致
 pub struct StreamResult {
     pub id: u32,

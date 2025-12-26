@@ -41,6 +41,7 @@ async fn main() -> Result<()> {
     let cmd = CommandRequest::new_subscribe(channel);
     let mut stream = client.execute_streaming(&cmd).await?;
     let id = stream.id;
+    // 让 client 退出
     start_unsubscribe(ctrl.open_stream().await?, channel, id)?;
 
     while let Some(Ok(data)) = stream.next().await {
