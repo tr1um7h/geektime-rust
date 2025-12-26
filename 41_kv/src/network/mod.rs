@@ -90,6 +90,7 @@ pub mod utils {
         }
     }
 
+    // +AsyncWrite
     impl AsyncWrite for DummyStream {
         fn poll_write(
             self: std::pin::Pin<&mut Self>,

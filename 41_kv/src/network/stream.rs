@@ -43,6 +43,7 @@ where
 
         // 使用 read_frame 来获取数据
         let fut = read_frame(&mut self.stream, &mut rest);
+        // 因为 future 是一个 trait，所以需要 Box 将其处理成一个在堆上的 trait object
         ready!(Box::pin(fut).poll_unpin(cx))?;
 
         // 拿到一个 frame 的数据，把 buffer 合并回去
