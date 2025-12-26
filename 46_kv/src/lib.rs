@@ -78,4 +78,8 @@ async fn start_tls_server<Store: Storage>(
             });
         });
     }
+
+    // tracing-subscriber bug, should upgrade to 0.3.17+
+    // as a workaround:
+    // cargo add regex --features unicode-case
 }

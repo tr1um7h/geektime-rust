@@ -210,6 +210,7 @@ mod tests {
 
     #[tokio::test]
     async fn tls_with_client_cert_should_work() -> Result<()> {
+        // run `cargo run --example gen_cert` if cert is out-dated
         let addr = start_server(true).await?;
         let connector = tls_connector(true)?;
         let stream = TcpStream::connect(addr).await?;

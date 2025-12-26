@@ -2,6 +2,7 @@
 name = "kv6"
 version = "0.1.0"
 edition = "2018"
+resolver = "2"
 
 [[bin]]
 name = "kvs"
@@ -22,6 +23,7 @@ futures = "0.3" # 提供 Stream trait
 http = "0.2" # 我们使用 HTTP status code 所以引入这个类型库
 opentelemetry-jaeger = "0.15" # opentelemetry jaeger 支持
 prost = "0.8" # 处理 protobuf 的代码
+regex = { version = "1.12.2", features = ["unicode-case"] }
 rustls-native-certs = "0.5"
 serde = { version = "1", features = ["derive"] } # 序列化/反序列化
 sled = "0.34" # sled db
