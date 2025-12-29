@@ -1,0 +1,19 @@
+[package]
+name = "kv"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bytes = "1.11.0"
+prost = "0.10.4"
+tracing = "0.1.44"
+
+[dev-dependencies]
+anyhow = "1.0.100"
+async-prost = "0.4.0"
+futures = "0.3.31"
+tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread", "io-util", "macros", "net"] }
+tracing-subscriber = "0.3.22"
+
+[build-dependencies]
+prost-build = "=0.10.4"  # 需要保持 prost, async-prost 一致
