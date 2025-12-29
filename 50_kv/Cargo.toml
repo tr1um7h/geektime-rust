@@ -7,6 +7,9 @@ edition = "2024"
 bytes = "1.11.0"
 prost = "0.10.4"
 tracing = "0.1.44"
+dashmap = "6.1.0"
+thiserror = "2.0.17"
+http = "1.4.0"
 
 [dev-dependencies]
 anyhow = "1.0.100"
