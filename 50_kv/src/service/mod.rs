@@ -1,6 +1,5 @@
 use crate::{
-    CommandRequest, CommandResponse, KvError, Storage, command_request::RequestData,
-    memory::Memtable,
+    CommandRequest, CommandResponse, KvError, Memtable, Storage, command_request::RequestData,
 };
 use std::sync::Arc;
 use tracing::debug;
@@ -134,7 +133,7 @@ mod tests {
     use tracing::info;
 
     use super::*;
-    use crate::{Value, memory::Memtable};
+    use crate::{Memtable, Value};
 
     #[test]
     fn service_should_work() {

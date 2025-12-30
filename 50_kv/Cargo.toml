@@ -10,11 +10,13 @@ tracing = "0.1.44"
 dashmap = "6.1.0"
 thiserror = "2.0.17"
 http = "1.4.0"
+sled = "0.34.7"
 
 [dev-dependencies]
 anyhow = "1.0.100"
 async-prost = "0.4.0"
 futures = "0.3.31"
+tempfile = "3.24.0"
 tokio = { version = "1.48.0", features = ["rt", "rt-multi-thread", "io-util", "macros", "net"] }
 tracing-subscriber = "0.3.22"
 
