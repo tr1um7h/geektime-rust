@@ -11,6 +11,7 @@ dashmap = "6.1.0"
 thiserror = "2.0.17"
 http = "1.4.0"
 sled = "0.34.7"
+rust-rocksdb = "0.44.2"
 
 [dev-dependencies]
 anyhow = "1.0.100"

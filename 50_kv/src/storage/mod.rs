@@ -1,8 +1,10 @@
 mod memory;
+mod rocksdb;
 mod sleddb;
 
 use crate::{KvError, Kvpair, Value};
 pub use memory::Memtable;
+pub use rocksdb::*;
 pub use sleddb::SledDb;
 
 pub trait Storage {
@@ -16,7 +18,10 @@ pub trait Storage {
 
     fn get_all(&self, table: &str) -> Result<Vec<Kvpair>, KvError>;
 
-    fn get_iter(&self, table: &str) -> Result<Box<dyn Iterator<Item = Kvpair>>, KvError>;
+    fn get_iter<'a>(
+        &'a self,
+        table: &str,
+    ) -> Result<Box<dyn Iterator<Item = Kvpair> + 'a>, KvError>;
 }
 
 pub struct StorageIter<T> {
@@ -119,6 +124,27 @@ mod tests {
     fn sleddb_iter_should_work() {
         let dir = tempdir().unwrap();
         let store = SledDb::new(dir);
+        test_get_iter(store);
+    }
+
+    #[test]
+    fn rocksdb_basic_interface_should_work() {
+        let dir = tempdir().unwrap();
+        let store = RocksDb::new(dir);
+        test_basic_interface(store);
+    }
+
+    #[test]
+    fn rocksdb_get_all_should_work() {
+        let dir = tempdir().unwrap();
+        let store = RocksDb::new(dir);
+        test_get_all(store);
+    }
+
+    #[test]
+    fn rocksdb_iter_should_work() {
+        let dir = tempdir().unwrap();
+        let store = RocksDb::new(dir);
         test_get_iter(store);
     }
 }

@@ -84,6 +84,15 @@ impl TryFrom<&[u8]> for Value {
     }
 }
 
+impl TryFrom<Vec<u8>> for Value {
+    type Error = KvError;
+
+    fn try_from(v: Vec<u8>) -> Result<Self, Self::Error> {
+        let msg = Value::decode(v.as_ref())?;
+        Ok(msg)
+    }
+}
+
 impl From<Value> for CommandResponse {
     fn from(v: Value) -> Self {
         Self {

@@ -17,11 +17,15 @@ pub enum KvError {
 
     #[error("Failed to encode protobuf message")]
     EncodeError(#[from] prost::EncodeError),
+
     #[error("Failed to decode protobuf message")]
     DecodeError(#[from] prost::DecodeError),
 
     #[error("Failed to access sled db")]
     SledError(#[from] sled::Error),
+
+    #[error("Failed to acess rocks db")]
+    RocksdbError(#[from] rust_rocksdb::Error),
 
     #[error("Internal error: {0}")]
     Internal(String),
