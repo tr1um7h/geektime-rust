@@ -17,6 +17,28 @@ pub trait Storage {
     fn get_iter(&self, table: &str) -> Result<Box<dyn Iterator<Item = Kvpair>>, KvError>;
 }
 
+pub struct StorageIter<T> {
+    data: T,
+}
+
+impl<T> StorageIter<T> {
+    pub fn new(data: T) -> Self {
+        Self { data }
+    }
+}
+
+impl<T> Iterator for StorageIter<T>
+where
+    T: Iterator,
+    T::Item: Into<Kvpair>,
+{
+    type Item = Kvpair;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.data.next().map(|v| v.into())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -31,6 +53,12 @@ mod tests {
     fn memtable_get_all_should_work() {
         let store = Memtable::new();
         test_get_all(store);
+    }
+
+    #[test]
+    fn memtable_iter_should_work() {
+        let store = Memtable::new();
+        test_get_iter(store);
     }
 
     fn test_basic_interface(store: impl Storage) {
@@ -52,5 +80,20 @@ mod tests {
                 Kvpair::new("k2", "v2".into())
             ]
         )
+    }
+
+    fn test_get_iter(store: impl Storage) {
+        store.set("t1", "k1".into(), "v1".into()).unwrap();
+        store.set("t1", "k2".into(), "v2".into()).unwrap();
+
+        let mut data: Vec<_> = store.get_iter("t1").unwrap().collect();
+        data.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        assert_eq!(
+            data,
+            vec![
+                Kvpair::new("k1", "v1".into()),
+                Kvpair::new("k2", "v2".into())
+            ]
+        );
     }
 }
