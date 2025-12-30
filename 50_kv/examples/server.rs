@@ -1,7 +1,7 @@
 use anyhow::Result;
 use async_prost::AsyncProstStream;
 use futures::prelude::*;
-use kv::{CommandRequest, CommandResponse, Memtable, Service};
+use kv::{CommandRequest, CommandResponse, Memtable, Service, ServiceInner};
 use tokio::net::{TcpListener, TcpStream};
 use tracing::info;
 
@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
     let listener = TcpListener::bind(addr).await?;
     info!("start listening on {}", addr);
 
-    let service = Service::new(Memtable::new());
+    let service: Service = ServiceInner::new(Memtable::default()).into();
 
     loop {
         let (stream, addr) = listener.accept().await?;
