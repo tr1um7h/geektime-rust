@@ -3,7 +3,7 @@ mod rocksdb;
 mod sleddb;
 
 use crate::{KvError, Kvpair, Value};
-pub use memory::Memtable;
+pub use memory::MemTable;
 pub use rocksdb::*;
 pub use sleddb::SledDb;
 
@@ -54,19 +54,19 @@ mod tests {
 
     #[test]
     fn memtable_basic_interface_should_work() {
-        let store = Memtable::new();
+        let store = MemTable::new();
         test_basic_interface(store);
     }
 
     #[test]
     fn memtable_get_all_should_work() {
-        let store = Memtable::new();
+        let store = MemTable::new();
         test_get_all(store);
     }
 
     #[test]
     fn memtable_iter_should_work() {
-        let store = Memtable::new();
+        let store = MemTable::new();
         test_get_iter(store);
     }
 

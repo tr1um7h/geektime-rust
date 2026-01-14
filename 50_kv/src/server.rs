@@ -6,19 +6,14 @@ use tracing::info;
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
-
     let addr = "127.0.0.1:9527";
+    let service: Service = ServiceInner::new(MemTable::new()).into();
     let listener = TcpListener::bind(addr).await?;
-    info!("start listening on {}", addr);
-
-    let service: Service = ServiceInner::new(MemTable::default()).into();
-
+    info!("Start listening on {}", addr);
     loop {
         let (stream, addr) = listener.accept().await?;
-        info!("client {:?} connected", addr);
-        let svc = service.clone();
-
-        let stream = ProstServerStream::new(stream, svc);
+        info!("Client {:?} connected", addr);
+        let stream = ProstServerStream::new(stream, service.clone());
         tokio::spawn(async move { stream.process().await });
     }
 }

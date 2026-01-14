@@ -1,3 +1,5 @@
+use std::io;
+
 use crate::Value;
 use thiserror::Error;
 
@@ -21,6 +23,12 @@ pub enum KvError {
     #[error("Failed to decode protobuf message")]
     DecodeError(#[from] prost::DecodeError),
 
+    #[error("Frame is larger than max size")]
+    FrameError,
+
+    #[error("Failed to io")]
+    IoError(MyError),
+
     #[error("Failed to access sled db")]
     SledError(#[from] sled::Error),
 
@@ -29,4 +37,25 @@ pub enum KvError {
 
     #[error("Internal error: {0}")]
     Internal(String),
+}
+
+#[derive(Debug)]
+pub struct MyError(io::Error);
+
+impl PartialEq for MyError {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.kind() == other.0.kind()
+    }
+}
+
+impl From<io::Error> for MyError {
+    fn from(error: io::Error) -> Self {
+        MyError(error)
+    }
+}
+
+impl From<io::Error> for KvError {
+    fn from(error: io::Error) -> Self {
+        KvError::IoError(MyError::from(error))
+    }
 }

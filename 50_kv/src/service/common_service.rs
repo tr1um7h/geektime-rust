@@ -23,13 +23,23 @@ impl CommandService for Hset {
     }
 }
 
+impl CommandService for Hdel {
+    fn execute(self, store: &impl Storage) -> CommandResponse {
+        match store.del(&self.table, &self.key) {
+            Ok(Some(v)) => v.into(),
+            Ok(None) => Value::default().into(),
+            Err(e) => e.into(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn hset_should_work() {
-        let store = Memtable::new();
+        let store = MemTable::new();
         let cmd = CommandRequest::new_hset("t1", "hello", "world".into());
         let res = dispatch(cmd.clone(), &store);
         assert_res_ok(res, &[Value::default()], &[]);
@@ -40,7 +50,7 @@ mod tests {
 
     #[test]
     fn hget_should_work() {
-        let store = Memtable::new();
+        let store = MemTable::new();
         let cmd = CommandRequest::new_hset("score", "u1", 10.into());
         dispatch(cmd, &store);
         let cmd = CommandRequest::new_hget("score", "u1");
@@ -50,7 +60,7 @@ mod tests {
 
     #[test]
     fn hget_with_non_exist_key_should_return_404() {
-        let store = Memtable::new();
+        let store = MemTable::new();
         let cmd = CommandRequest::new_hget("score", "u2");
         let res = dispatch(cmd, &store);
         assert_res_error(res, 404, "Not found");

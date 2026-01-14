@@ -1,5 +1,5 @@
 use crate::{
-    CommandRequest, CommandResponse, KvError, Memtable, Storage, command_request::RequestData,
+    CommandRequest, CommandResponse, KvError, MemTable, Storage, command_request::RequestData,
 };
 use std::sync::Arc;
 use tracing::debug;
@@ -10,7 +10,7 @@ pub trait CommandService {
     fn execute(self, store: &impl Storage) -> CommandResponse;
 }
 
-pub struct Service<Store = Memtable> {
+pub struct Service<Store = MemTable> {
     inner: Arc<ServiceInner<Store>>,
 }
 
@@ -133,11 +133,11 @@ mod tests {
     use tracing::info;
 
     use super::*;
-    use crate::{Memtable, Value};
+    use crate::{MemTable, Value};
 
     #[test]
     fn service_should_work() {
-        let service: Service = ServiceInner::new(Memtable::default()).into();
+        let service: Service = ServiceInner::new(MemTable::default()).into();
         let cloned = service.clone();
 
         let handle = thread::spawn(move || {
@@ -165,7 +165,7 @@ mod tests {
             info!("Data is sent");
         }
 
-        let service: Service = ServiceInner::new(Memtable::default())
+        let service: Service = ServiceInner::new(MemTable::default())
             .fn_received(|_: &CommandRequest| {})
             .fn_received(b)
             .fn_executed(c)

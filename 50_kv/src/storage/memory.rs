@@ -2,11 +2,11 @@ use crate::{KvError, Kvpair, Storage, StorageIter, Value};
 use dashmap::{DashMap, mapref::one::Ref};
 
 #[derive(Debug, Clone, Default)]
-pub struct Memtable {
+pub struct MemTable {
     tables: DashMap<String, DashMap<String, Value>>,
 }
 
-impl Memtable {
+impl MemTable {
     pub fn new() -> Self {
         Self::default()
     }
@@ -23,7 +23,7 @@ impl Memtable {
     }
 }
 
-impl Storage for Memtable {
+impl Storage for MemTable {
     fn get(&self, table: &str, key: &str) -> Result<Option<Value>, KvError> {
         let table: Ref<'_, String, DashMap<String, Value>> = self.get_or_create_table(table);
         Ok(table.get(key).map(|v| v.value().clone()))
