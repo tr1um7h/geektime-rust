@@ -4,7 +4,7 @@ mod sleddb;
 
 use crate::{KvError, Kvpair, Value};
 pub use memory::MemTable;
-pub use rocksdb::*;
+pub use rocksdb::RocksDb;
 pub use sleddb::SledDb;
 
 pub trait Storage {

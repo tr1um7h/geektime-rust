@@ -1,19 +1,22 @@
 mod frame;
 
-use bytes::BytesMut;
+use bytes::{Bytes, BytesMut};
 pub use frame::{FrameCoder, read_frame};
+use futures::{SinkExt, StreamExt};
+use prost::Message;
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
+use tokio_util::codec::{Framed, LengthDelimitedCodec};
 use tracing::info;
 
 use crate::{CommandRequest, CommandResponse, KvError, Service};
 
 pub struct ProstServerStream<S> {
-    inner: S,
+    inner: Framed<S, LengthDelimitedCodec>,
     service: Service,
 }
 
 pub struct ProstClientStream<S> {
-    inner: S,
+    inner: Framed<S, LengthDelimitedCodec>,
 }
 
 impl<S> ProstServerStream<S>
@@ -22,24 +25,29 @@ where
 {
     pub fn new(stream: S, service: Service) -> Self {
         Self {
-            inner: stream,
+            inner: Framed::new(stream, LengthDelimitedCodec::new()),
             service: service,
         }
     }
 
     async fn send(&mut self, msg: CommandResponse) -> Result<(), KvError> {
-        let mut buf = BytesMut::new();
-        msg.encode_frame(&mut buf)?;
-        let encoded = buf.freeze();
-        self.inner.write_all(&encoded[..]).await?;
+        //TODO: use LengthDelimitedCodec
+        // msg -> bytes -> framedCodec
+        let buf = Bytes::from(msg.encode_to_vec());
+        self.inner.send(buf).await?;
         Ok(())
     }
 
     async fn recv(&mut self) -> Result<CommandRequest, KvError> {
-        let mut buf = BytesMut::new();
-        let stream = &mut self.inner;
-        read_frame(stream, &mut buf).await?;
-        CommandRequest::decode_frame(&mut buf)
+        // frameCodec -> bytes -> msg
+        match self.inner.next().await {
+            Some(Ok(buf)) => {
+                let req = CommandRequest::decode(buf)?;
+                return Ok(req);
+            }
+            Some(Err(e)) => return Err(e.into()),
+            None => return Err(KvError::FrameError),
+        }
     }
 
     pub async fn process(mut self) -> Result<(), KvError> {
@@ -58,22 +66,28 @@ where
     S: AsyncRead + AsyncWrite + Unpin + Send,
 {
     pub fn new(stream: S) -> Self {
-        Self { inner: stream }
+        Self {
+            inner: Framed::new(stream, LengthDelimitedCodec::new()),
+        }
     }
 
     async fn send(&mut self, msg: CommandRequest) -> Result<(), KvError> {
-        let mut buf = BytesMut::new();
-        msg.encode_frame(&mut buf)?;
-        let encoded = buf.freeze();
-        self.inner.write_all(&encoded[..]).await?;
+        // msg -> bytes -> framedCodec
+        let buf = Bytes::from(msg.encode_to_vec());
+        self.inner.send(buf).await?;
         Ok(())
     }
 
     async fn recv(&mut self) -> Result<CommandResponse, KvError> {
-        let mut buf = BytesMut::new();
-        let stream = &mut self.inner;
-        read_frame(stream, &mut buf).await?;
-        CommandResponse::decode_frame(&mut buf)
+        // frameCodec -> bytes -> msg
+        match self.inner.next().await {
+            Some(Ok(buf)) => {
+                let resp = CommandResponse::decode(buf)?;
+                return Ok(resp);
+            }
+            Some(Err(e)) => return Err(e.into()),
+            None => return Err(KvError::FrameError),
+        }
     }
 
     pub async fn execute(&mut self, cmd: CommandRequest) -> Result<CommandResponse, KvError> {
