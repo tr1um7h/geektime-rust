@@ -25,7 +25,12 @@ where
 {
     pub fn new(stream: S, service: Service) -> Self {
         Self {
-            inner: Framed::new(stream, LengthDelimitedCodec::new()),
+            inner: Framed::new(
+                stream,
+                LengthDelimitedCodec::builder()
+                    .length_adjustment(2)
+                    .new_codec(),
+            ),
             service: service,
         }
     }
@@ -33,8 +38,10 @@ where
     async fn send(&mut self, msg: CommandResponse) -> Result<(), KvError> {
         //TODO: use LengthDelimitedCodec
         // msg -> bytes -> framedCodec
-        let buf = Bytes::from(msg.encode_to_vec());
-        self.inner.send(buf).await?;
+        let mut buf: Vec<u8> = vec![0xB, 0xB];
+        buf.extend(Bytes::from(msg.encode_to_vec()));
+        let buf1 = Bytes::from(buf);
+        self.inner.send(buf1).await?;
         Ok(())
     }
 
@@ -42,7 +49,8 @@ where
         // frameCodec -> bytes -> msg
         match self.inner.next().await {
             Some(Ok(buf)) => {
-                let req = CommandRequest::decode(buf)?;
+                println!("{:X?}", &buf[..2]);
+                let req = CommandRequest::decode(&buf[2..])?;
                 return Ok(req);
             }
             Some(Err(e)) => return Err(e.into()),
@@ -67,14 +75,22 @@ where
 {
     pub fn new(stream: S) -> Self {
         Self {
-            inner: Framed::new(stream, LengthDelimitedCodec::new()),
+            inner: Framed::new(
+                stream,
+                LengthDelimitedCodec::builder()
+                    .length_adjustment(2)
+                    .new_codec(),
+            ),
         }
     }
 
     async fn send(&mut self, msg: CommandRequest) -> Result<(), KvError> {
         // msg -> bytes -> framedCodec
-        let buf = Bytes::from(msg.encode_to_vec());
-        self.inner.send(buf).await?;
+        let mut buf: Vec<u8> = vec![0xC, 0xC];
+        buf.extend(Bytes::from(msg.encode_to_vec()));
+        let buf1 = Bytes::from(buf);
+        self.inner.send(buf1).await?;
+
         Ok(())
     }
 
@@ -82,7 +98,8 @@ where
         // frameCodec -> bytes -> msg
         match self.inner.next().await {
             Some(Ok(buf)) => {
-                let resp = CommandResponse::decode(buf)?;
+                println!("{:X?}", &buf[..2]);
+                let resp = CommandResponse::decode(&buf[2..])?;
                 return Ok(resp);
             }
             Some(Err(e)) => return Err(e.into()),
