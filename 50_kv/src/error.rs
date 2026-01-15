@@ -8,6 +8,9 @@ pub enum KvError {
     #[error("Not found for table: {0}, key: {1}")]
     NotFound(String, String),
 
+    #[error("Parse cert failed: ca: {0}, cert: {1}")]
+    CertifcateParseError(&'static str, &'static str),
+
     #[error("Cannot convert to {1}")]
     ConvertError(Value, &'static str),
 
@@ -31,6 +34,9 @@ pub enum KvError {
 
     #[error("Failed to access sled db")]
     SledError(#[from] sled::Error),
+
+    #[error("Failed to tls")]
+    TlsError(#[from] rustls::TLSError),
 
     #[error("Failed to acess rocks db")]
     RocksdbError(#[from] rust_rocksdb::Error),
