@@ -11,8 +11,12 @@ async fn main() -> Result<()> {
     // 连接服务器
     let stream = TcpStream::connect(addr).await?;
 
+    let client_cert = include_str!("../fixtures/client.cert");
+    let client_key = include_str!("../fixtures/client.key");
     let ca_cert = include_str!("../fixtures/ca.cert");
-    let connector = TlsClientConnector::new("kvserver.acme.inc", None, Some(ca_cert))?;
+    let client_identity = Some((client_cert, client_key));
+
+    let connector = TlsClientConnector::new("kvserver.acme.inc", client_identity, Some(ca_cert))?;
     let stream = connector.connect(stream).await?;
 
     let mut client = ProstClientStream::new(stream);
