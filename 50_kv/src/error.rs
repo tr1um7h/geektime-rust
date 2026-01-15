@@ -38,9 +38,8 @@ pub enum KvError {
     #[error("Failed to tls")]
     TlsError(#[from] rustls::TLSError),
 
-    #[error("Failed to acess rocks db")]
-    RocksdbError(#[from] rust_rocksdb::Error),
-
+    // #[error("Failed to acess rocks db")]
+    // RocksdbError(#[from] rust_rocksdb::Error),
     #[error("Internal error: {0}")]
     Internal(String),
 }

@@ -7,7 +7,7 @@ pub use tls::{TlsClientConnector, TlsServerAcceptor};
 use bytes::Bytes;
 use futures::{SinkExt, StreamExt};
 use prost::Message;
-use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
 use tracing::info;
 

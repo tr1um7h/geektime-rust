@@ -1,10 +1,10 @@
 mod memory;
-mod rocksdb;
+// mod rocksdb;
 mod sleddb;
 
 use crate::{KvError, Kvpair, Value};
 pub use memory::MemTable;
-pub use rocksdb::RocksDb;
+// pub use rocksdb::RocksDb;
 pub use sleddb::SledDb;
 
 pub trait Storage {
@@ -127,24 +127,24 @@ mod tests {
         test_get_iter(store);
     }
 
-    #[test]
-    fn rocksdb_basic_interface_should_work() {
-        let dir = tempdir().unwrap();
-        let store = RocksDb::new(dir);
-        test_basic_interface(store);
-    }
+    // #[test]
+    // fn rocksdb_basic_interface_should_work() {
+    // let dir = tempdir().unwrap();
+    // let store = RocksDb::new(dir);
+    // test_basic_interface(store);
+    // }
 
-    #[test]
-    fn rocksdb_get_all_should_work() {
-        let dir = tempdir().unwrap();
-        let store = RocksDb::new(dir);
-        test_get_all(store);
-    }
+    // #[test]
+    // fn rocksdb_get_all_should_work() {
+    // let dir = tempdir().unwrap();
+    // let store = RocksDb::new(dir);
+    // test_get_all(store);
+    // }
 
-    #[test]
-    fn rocksdb_iter_should_work() {
-        let dir = tempdir().unwrap();
-        let store = RocksDb::new(dir);
-        test_get_iter(store);
-    }
+    // #[test]
+    // fn rocksdb_iter_should_work() {
+    //     let dir = tempdir().unwrap();
+    //     let store = RocksDb::new(dir);
+    //     test_get_iter(store);
+    // }
 }

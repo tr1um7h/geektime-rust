@@ -2,7 +2,7 @@ use anyhow::Result;
 use async_prost::AsyncProstStream;
 use futures::prelude::*;
 use kv::{CommandRequest, CommandResponse};
-use tokio::net::{TcpListener, TcpStream};
+use tokio::net::TcpListener;
 use tracing::info;
 
 #[tokio::main]
