@@ -1,25 +1,24 @@
 mod frame;
+mod stream;
 mod tls;
 
 pub use frame::{FrameCoder, read_frame};
+pub use stream::ProstStream;
 pub use tls::{TlsClientConnector, TlsServerAcceptor};
 
-use bytes::Bytes;
 use futures::{SinkExt, StreamExt};
-use prost::Message;
 use tokio::io::{AsyncRead, AsyncWrite};
-use tokio_util::codec::{Framed, LengthDelimitedCodec};
 use tracing::info;
 
 use crate::{CommandRequest, CommandResponse, KvError, Service};
 
 pub struct ProstServerStream<S> {
-    inner: Framed<S, LengthDelimitedCodec>,
+    inner: ProstStream<S, CommandRequest, CommandResponse>,
     service: Service,
 }
 
 pub struct ProstClientStream<S> {
-    inner: Framed<S, LengthDelimitedCodec>,
+    inner: ProstStream<S, CommandResponse, CommandRequest>,
 }
 
 impl<S> ProstServerStream<S>
@@ -28,12 +27,7 @@ where
 {
     pub fn new(stream: S, service: Service) -> Self {
         Self {
-            inner: Framed::new(
-                stream,
-                LengthDelimitedCodec::builder()
-                    .length_adjustment(2)
-                    .new_codec(),
-            ),
+            inner: ProstStream::new(stream),
             service: service,
         }
     }
@@ -41,19 +35,14 @@ where
     async fn send(&mut self, msg: CommandResponse) -> Result<(), KvError> {
         //TODO: use LengthDelimitedCodec
         // msg -> bytes -> framedCodec
-        let mut buf: Vec<u8> = vec![0xB, 0xB];
-        buf.extend(Bytes::from(msg.encode_to_vec()));
-        let buf1 = Bytes::from(buf);
-        self.inner.send(buf1).await?;
+        self.inner.send(msg).await?;
         Ok(())
     }
 
     async fn recv(&mut self) -> Result<CommandRequest, KvError> {
         // frameCodec -> bytes -> msg
         match self.inner.next().await {
-            Some(Ok(buf)) => {
-                println!("{:X?}", &buf[..2]);
-                let req = CommandRequest::decode(&buf[2..])?;
+            Some(Ok(req)) => {
                 return Ok(req);
             }
             Some(Err(e)) => return Err(e.into()),
@@ -78,41 +67,74 @@ where
 {
     pub fn new(stream: S) -> Self {
         Self {
-            inner: Framed::new(
-                stream,
-                LengthDelimitedCodec::builder()
-                    .length_adjustment(2)
-                    .new_codec(),
-            ),
-        }
-    }
-
-    async fn send(&mut self, msg: CommandRequest) -> Result<(), KvError> {
-        // msg -> bytes -> framedCodec
-        let mut buf: Vec<u8> = vec![0xC, 0xC];
-        buf.extend(Bytes::from(msg.encode_to_vec()));
-        let buf1 = Bytes::from(buf);
-        self.inner.send(buf1).await?;
-
-        Ok(())
-    }
-
-    async fn recv(&mut self) -> Result<CommandResponse, KvError> {
-        // frameCodec -> bytes -> msg
-        match self.inner.next().await {
-            Some(Ok(buf)) => {
-                println!("{:X?}", &buf[..2]);
-                let resp = CommandResponse::decode(&buf[2..])?;
-                return Ok(resp);
-            }
-            Some(Err(e)) => return Err(e.into()),
-            None => return Err(KvError::FrameError),
+            inner: ProstStream::new(stream),
         }
     }
 
     pub async fn execute(&mut self, cmd: CommandRequest) -> Result<CommandResponse, KvError> {
-        self.send(cmd).await?;
-        Ok(self.recv().await?)
+        let stream = &mut self.inner;
+        stream.send(cmd).await?;
+        match stream.next().await {
+            Some(v) => v,
+            None => Err(KvError::Internal("Didnot get any response".into())),
+        }
+    }
+}
+
+#[cfg(test)]
+pub mod utils {
+    use std::task::Poll;
+
+    use bytes::{BufMut, BytesMut};
+    use tokio::io::{AsyncRead, AsyncWrite};
+
+    pub struct DummyStream {
+        pub buf: BytesMut,
+    }
+
+    impl AsyncRead for DummyStream {
+        fn poll_read(
+            self: std::pin::Pin<&mut Self>,
+            _cx: &mut std::task::Context<'_>,
+            buf: &mut tokio::io::ReadBuf<'_>,
+        ) -> std::task::Poll<std::io::Result<()>> {
+            // 看看 ReadBuf 需要多大的数据
+            let len = buf.capacity();
+
+            // split 出这么大的数据
+            let data = self.get_mut().buf.split_to(len);
+
+            // 拷贝给 ReadBuf
+            buf.put_slice(&data);
+
+            // 直接完工
+            std::task::Poll::Ready(Ok(()))
+        }
+    }
+
+    impl AsyncWrite for DummyStream {
+        fn poll_write(
+            self: std::pin::Pin<&mut Self>,
+            _cx: &mut std::task::Context<'_>,
+            buf: &[u8],
+        ) -> std::task::Poll<Result<usize, std::io::Error>> {
+            self.get_mut().buf.put_slice(buf);
+            Poll::Ready(Ok(buf.len()))
+        }
+
+        fn poll_flush(
+            self: std::pin::Pin<&mut Self>,
+            _cx: &mut std::task::Context<'_>,
+        ) -> Poll<Result<(), std::io::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn poll_shutdown(
+            self: std::pin::Pin<&mut Self>,
+            _cx: &mut std::task::Context<'_>,
+        ) -> Poll<Result<(), std::io::Error>> {
+            Poll::Ready(Ok(()))
+        }
     }
 }
 
@@ -123,6 +145,7 @@ mod tests {
 
     use super::*;
     use anyhow::Result;
+    use bytes::Bytes;
     use tokio::{
         io::{AsyncReadExt, AsyncWriteExt},
         net::{TcpListener, TcpStream},

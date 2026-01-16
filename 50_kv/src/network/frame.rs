@@ -154,42 +154,4 @@ mod tests {
             false
         }
     }
-
-    struct DummyStream {
-        buf: BytesMut,
-    }
-
-    impl AsyncRead for DummyStream {
-        fn poll_read(
-            self: std::pin::Pin<&mut Self>,
-            _cx: &mut std::task::Context<'_>,
-            buf: &mut tokio::io::ReadBuf<'_>,
-        ) -> std::task::Poll<std::io::Result<()>> {
-            // 看看 ReadBuf 需要多大的数据
-            let len = buf.capacity();
-
-            // split 出这么大的数据
-            let data = self.get_mut().buf.split_to(len);
-
-            // 拷贝给 ReadBuf
-            buf.put_slice(&data);
-
-            // 直接完工
-            std::task::Poll::Ready(Ok(()))
-        }
-    }
-
-    #[tokio::test]
-    async fn read_frame_should_work() {
-        let mut buf = BytesMut::new();
-        let cmd = CommandRequest::new_hdel("t1", "k1");
-        cmd.encode_frame(&mut buf).unwrap();
-        let mut stream = DummyStream { buf };
-
-        let mut data = BytesMut::new();
-        read_frame(&mut stream, &mut data).await.unwrap();
-
-        let cmd1 = CommandRequest::decode_frame(&mut data).unwrap();
-        assert_eq!(cmd, cmd1);
-    }
 }
