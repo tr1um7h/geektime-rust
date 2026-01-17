@@ -1,4 +1,5 @@
 mod frame;
+mod multiplex;
 mod stream;
 mod tls;
 
@@ -83,11 +84,12 @@ where
 
 #[cfg(test)]
 pub mod utils {
-    use std::task::Poll;
+    use std::{cmp::min, task::Poll};
 
     use bytes::{BufMut, BytesMut};
     use tokio::io::{AsyncRead, AsyncWrite};
 
+    #[derive(Default)]
     pub struct DummyStream {
         pub buf: BytesMut,
     }
@@ -97,18 +99,12 @@ pub mod utils {
             self: std::pin::Pin<&mut Self>,
             _cx: &mut std::task::Context<'_>,
             buf: &mut tokio::io::ReadBuf<'_>,
-        ) -> std::task::Poll<std::io::Result<()>> {
-            // 看看 ReadBuf 需要多大的数据
-            let len = buf.capacity();
-
-            // split 出这么大的数据
-            let data = self.get_mut().buf.split_to(len);
-
-            // 拷贝给 ReadBuf
+        ) -> Poll<std::io::Result<()>> {
+            let this = self.get_mut();
+            let len = min(buf.capacity(), this.buf.len());
+            let data = this.buf.split_to(len);
             buf.put_slice(&data);
-
-            // 直接完工
-            std::task::Poll::Ready(Ok(()))
+            Poll::Ready(Ok(()))
         }
     }
 
@@ -141,7 +137,7 @@ pub mod utils {
 #[cfg(test)]
 mod tests {
 
-    use std::net::SocketAddr;
+    use std::{net::SocketAddr, sync::Arc};
 
     use super::*;
     use anyhow::Result;
@@ -151,13 +147,10 @@ mod tests {
         net::{TcpListener, TcpStream},
     };
 
-    use crate::{MemTable, ServiceInner, Value, assert_res_ok};
-
-    const CA_CERT: &str = include_str!("../../fixtures/ca.cert");
-    const CLIENT_CERT: &str = include_str!("../../fixtures/client.cert");
-    const CLIENT_KEY: &str = include_str!("../../fixtures/client.key");
-    const SERVER_CERT: &str = include_str!("../../fixtures/server.cert");
-    const SERVER_KEY: &str = include_str!("../../fixtures/server.key");
+    use crate::{
+        MemTable, ServiceInner, Value, assert_res_ok,
+        network::tls::tls_utils::{tls_acceptor, tls_connector},
+    };
 
     #[tokio::test]
     async fn client_server_basic_communication_should_work() -> anyhow::Result<()> {
@@ -223,11 +216,9 @@ mod tests {
 
     #[tokio::test]
     async fn tls_should_work() -> Result<()> {
-        let ca = Some(CA_CERT);
+        let addr = start_tls_server(false).await?;
+        let connector = tls_connector(false)?;
 
-        let addr = start_tls_server(None).await?;
-
-        let connector = TlsClientConnector::new("kvserver.acme.inc", None, ca)?;
         let stream = TcpStream::connect(addr).await?;
         let mut stream = connector.connect(stream).await?;
         stream.write_all(b"hello world!").await?;
@@ -240,12 +231,8 @@ mod tests {
 
     #[tokio::test]
     async fn tls_with_client_cert_should_work() -> Result<()> {
-        let client_identity = Some((CLIENT_CERT, CLIENT_KEY));
-        let ca = Some(CA_CERT);
-
-        let addr = start_tls_server(ca.clone()).await?;
-
-        let connector = TlsClientConnector::new("kvserver.acme.inc", client_identity, ca)?;
+        let addr = start_tls_server(true).await?;
+        let connector = tls_connector(true)?;
         let stream = TcpStream::connect(addr).await?;
         let mut stream = connector.connect(stream).await?;
         stream.write_all(b"hello world!").await?;
@@ -258,9 +245,10 @@ mod tests {
 
     #[tokio::test]
     async fn tls_with_bad_domain_should_not_work() -> Result<()> {
-        let addr = start_tls_server(None).await?;
+        let addr = start_tls_server(false).await?;
+        let mut connector = tls_connector(false)?;
+        connector.domain = Arc::new("kvserver1.acme.inc".into());
 
-        let connector = TlsClientConnector::new("kvserver1.acme.inc", None, Some(CA_CERT))?;
         let stream = TcpStream::connect(addr).await?;
         let result = connector.connect(stream).await;
 
@@ -269,8 +257,8 @@ mod tests {
         Ok(())
     }
 
-    async fn start_tls_server(ca: Option<&str>) -> Result<SocketAddr> {
-        let acceptor = TlsServerAcceptor::new(SERVER_CERT, SERVER_KEY, ca)?;
+    async fn start_tls_server(client_cert: bool) -> Result<SocketAddr> {
+        let acceptor = tls_acceptor(client_cert)?;
 
         let echo = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = echo.local_addr().unwrap();
