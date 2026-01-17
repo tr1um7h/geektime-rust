@@ -1,6 +1,5 @@
 use std::io;
 
-use crate::Value;
 use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
@@ -12,7 +11,7 @@ pub enum KvError {
     CertifcateParseError(&'static str, &'static str),
 
     #[error("Cannot convert to {1}")]
-    ConvertError(Value, &'static str),
+    ConvertError(String, &'static str),
 
     #[error("Cannot parse command: {0}")]
     InvalidCommand(String),

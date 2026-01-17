@@ -170,7 +170,7 @@ mod tests {
 
         let cmd = CommandRequest::new_hget("t1", "k1");
         let res = client.execute(cmd).await.unwrap();
-        assert_res_ok(res, &["v1".into()], &[]);
+        assert_res_ok(&res, &["v1".into()], &[]);
 
         Ok(())
     }

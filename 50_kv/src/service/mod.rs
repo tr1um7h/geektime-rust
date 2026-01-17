@@ -5,6 +5,7 @@ use std::sync::Arc;
 use tracing::debug;
 
 mod common_service;
+mod topic;
 
 pub trait CommandService {
     fn execute(self, store: &impl Storage) -> CommandResponse;
@@ -142,12 +143,12 @@ mod tests {
 
         let handle = thread::spawn(move || {
             let res = cloned.execute(CommandRequest::new_hset("t1", "k1", "v1".into()));
-            assert_res_ok(res, &[Value::default()], &[]);
+            assert_res_ok(&res, &[Value::default()], &[]);
         });
         handle.join().unwrap();
 
         let res = service.execute(CommandRequest::new_hget("t1", "k1"));
-        assert_res_ok(res, &["v1".into()], &[]);
+        assert_res_ok(&res, &["v1".into()], &[]);
     }
 
     #[test]
@@ -184,12 +185,13 @@ mod tests {
 use crate::{Kvpair, Value};
 
 #[cfg(test)]
-pub fn assert_res_ok(mut res: CommandResponse, values: &[Value], pairs: &[Kvpair]) {
-    res.pairs.sort_by(|a, b| a.partial_cmp(b).unwrap());
+pub fn assert_res_ok(res: &CommandResponse, values: &[Value], pairs: &[Kvpair]) {
+    let mut pair = res.pairs.clone();
+    pair.sort_by(|a, b| a.partial_cmp(b).unwrap());
     assert_eq!(res.status, 200);
     assert_eq!(res.message, "");
     assert_eq!(res.values, values);
-    assert_eq!(res.pairs, pairs);
+    assert_eq!(pair, pairs);
 }
 
 #[cfg(test)]

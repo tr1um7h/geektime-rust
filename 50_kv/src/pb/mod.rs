@@ -34,6 +34,16 @@ impl CommandRequest {
             })),
         }
     }
+
+    pub fn format(&self) -> String {
+        format!("{:?}", self)
+    }
+}
+
+impl CommandResponse {
+    pub fn format(&self) -> String {
+        format!("{:?}", self)
+    }
 }
 
 impl Kvpair {
@@ -48,6 +58,12 @@ impl Kvpair {
 impl From<(String, Value)> for Kvpair {
     fn from(data: (String, Value)) -> Self {
         Kvpair::new(data.0, data.1)
+    }
+}
+
+impl Value {
+    pub fn format(&self) -> String {
+        format!("{:?}", self)
     }
 }
 
@@ -153,5 +169,30 @@ impl From<KvError> for CommandResponse {
         }
 
         result
+    }
+}
+
+impl TryFrom<&Value> for i64 {
+    type Error = KvError;
+
+    fn try_from(v: &Value) -> Result<Self, Self::Error> {
+        match v.value {
+            Some(value::Value::Integer(i)) => Ok(i),
+            _ => Err(KvError::ConvertError(v.format(), "Integer")),
+        }
+    }
+}
+
+impl TryFrom<&CommandResponse> for i64 {
+    type Error = KvError;
+
+    fn try_from(value: &CommandResponse) -> Result<Self, Self::Error> {
+        if value.status != StatusCode::OK.as_u16() as u32 {
+            return Err(KvError::ConvertError(value.format(), "CommandResponse"));
+        }
+        match value.values.get(0) {
+            Some(v) => v.try_into(),
+            None => Err(KvError::ConvertError(value.format(), "CommandResponse")),
+        }
     }
 }

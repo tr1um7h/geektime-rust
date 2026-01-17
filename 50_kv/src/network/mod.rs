@@ -165,14 +165,14 @@ mod tests {
         let res = client.execute(cmd).await.unwrap();
 
         // 第一次 HSET 服务器应该返回 None
-        assert_res_ok(res, &[Value::default()], &[]);
+        assert_res_ok(&res, &[Value::default()], &[]);
 
         // 再发一个 HSET
         let cmd = CommandRequest::new_hget("t1", "k1");
         let res = client.execute(cmd).await?;
 
         // 服务器应该返回上一次的结果
-        assert_res_ok(res, &["v1".into()], &[]);
+        assert_res_ok(&res, &["v1".into()], &[]);
 
         Ok(())
     }
@@ -188,12 +188,12 @@ mod tests {
         let cmd = CommandRequest::new_hset("t2", "k2", v.clone().into());
         let res = client.execute(cmd).await?;
 
-        assert_res_ok(res, &[Value::default()], &[]);
+        assert_res_ok(&res, &[Value::default()], &[]);
 
         let cmd = CommandRequest::new_hget("t2", "k2");
         let res = client.execute(cmd).await?;
 
-        assert_res_ok(res, &[v.into()], &[]);
+        assert_res_ok(&res, &[v.into()], &[]);
 
         Ok(())
     }
