@@ -4,8 +4,8 @@ use thiserror::Error;
 
 #[derive(Debug, Error, PartialEq)]
 pub enum KvError {
-    #[error("Not found for table: {0}, key: {1}")]
-    NotFound(String, String),
+    #[error("Not found: {0}")]
+    NotFound(String),
 
     #[error("Parse cert failed: ca: {0}, cert: {1}")]
     CertifcateParseError(&'static str, &'static str),

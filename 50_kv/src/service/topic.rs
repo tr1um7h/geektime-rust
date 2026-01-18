@@ -10,6 +10,7 @@ use tracing::info;
 use tracing::warn;
 
 use crate::CommandResponse;
+use crate::KvError;
 use crate::Value;
 
 const BROADCAST_CAPACITY: usize = 128;
@@ -24,7 +25,7 @@ pub trait Topic: Send + Sync + 'static {
     /// sub topic
     fn subscribe(self, name: String) -> mpsc::Receiver<Arc<CommandResponse>>;
     /// unsub topic
-    fn unsubscribe(self, name: String, id: u32);
+    fn unsubscribe(self, name: String, id: u32) -> Result<u32, KvError>;
     /// publish
     fn publish(self, name: String, value: Arc<CommandResponse>);
 }
@@ -67,7 +68,45 @@ impl Topic for Arc<Broadcaster> {
         rx
     }
 
-    fn unsubscribe(self, name: String, id: u32) {
+    fn unsubscribe(self, name: String, id: u32) -> Result<u32, KvError> {
+        match self.remove_subscription(name, id) {
+            Some(id) => Ok(id),
+            None => Err(KvError::NotFound(format!("subscription {}", id))),
+        }
+    }
+
+    fn publish(self, name: String, value: Arc<CommandResponse>) {
+        tokio::spawn(async move {
+            let mut ids = vec![];
+            match self.topics.get(&name) {
+                Some(topic) => {
+                    // 复制整个topic下所有的 subscription_id
+                    // 这里每个id是u32, 如果1个topic有10k的订阅，复制成本是40k堆内存
+                    let subscription = topic.value().clone();
+
+                    // 尽快释放锁
+                    drop(topic);
+
+                    for id in subscription.into_iter() {
+                        if let Some(tx) = self.subscriptions.get(&id) {
+                            if let Err(e) = tx.send(value.clone()).await {
+                                warn!("Publish to {} failed, error: {:?}", id, e);
+                                ids.push(id);
+                            }
+                        }
+                    }
+                }
+                None => {}
+            }
+            for id in ids {
+                self.remove_subscription(name.clone(), id);
+            }
+        });
+    }
+}
+
+impl Broadcaster {
+    pub fn remove_subscription(&self, name: String, id: u32) -> Option<u32> {
         if let Some(v) = self.topics.get_mut(&name) {
             // if topics contain, remove it
             v.remove(&id);
@@ -82,28 +121,7 @@ impl Topic for Arc<Broadcaster> {
         debug!("Subscription {} is removed", id);
 
         // remove from table
-        self.subscriptions.remove(&id);
-    }
-
-    fn publish(self, name: String, value: Arc<CommandResponse>) {
-        tokio::spawn(async move {
-            match self.topics.get(&name) {
-                Some(chan) => {
-                    // 复制整个topic下所有的 subscription_id
-                    // 这里每个id是u32, 如果1个topic有10k的订阅，复制成本是40k堆内存
-                    let chan = chan.value().clone();
-
-                    for id in chan.into_iter() {
-                        if let Some(tx) = self.subscriptions.get(&id) {
-                            if let Err(e) = tx.send(value.clone()).await {
-                                warn!("Publish to {} failed, error: {:?}", id, e);
-                            }
-                        }
-                    }
-                }
-                None => {}
-            }
-        });
+        self.subscriptions.remove(&id).map(|(id, _)| id)
     }
 }
 
@@ -143,7 +161,8 @@ mod tests {
         assert_res_ok(&res1, &[v.clone()], &[]);
 
         // 如果 subscriber 取消订阅，则收不到新数据
-        b.clone().unsubscribe(lobby.clone(), id1 as _);
+        let res = b.clone().unsubscribe(lobby.clone(), id1 as _).unwrap();
+        assert_eq!(res, id1 as _);
 
         // publish
         let v: Value = "world".into();

@@ -4,7 +4,7 @@ impl CommandService for Hget {
     fn execute(self, store: &impl Storage) -> CommandResponse {
         match store.get(&self.table, &self.key) {
             Ok(Some(v)) => v.into(),
-            Ok(None) => KvError::NotFound(self.table, self.key).into(),
+            Ok(None) => KvError::NotFound(format!("table {}, key {}", self.table, self.key)).into(),
             Err(e) => e.into(),
         }
     }
@@ -63,6 +63,6 @@ mod tests {
         let store = MemTable::new();
         let cmd = CommandRequest::new_hget("score", "u2");
         let res = dispatch(cmd, &store);
-        assert_res_error(res, 404, "Not found");
+        assert_res_error(&res, 404, "Not found");
     }
 }
