@@ -1,6 +1,7 @@
 use anyhow::Result;
-use kv::{MemTable, ProstServerStream, Service, ServiceInner, TlsServerAcceptor};
+use kv::{MemTable, ProstServerStream, Service, ServiceInner, TlsServerAcceptor, YamuxCtrl};
 use tokio::net::TcpListener;
+use tokio_util::compat::{FuturesAsyncReadCompatExt, TokioAsyncReadCompatExt};
 use tracing::info;
 
 #[tokio::main]
@@ -20,8 +21,22 @@ async fn main() -> Result<()> {
         let (stream, addr) = listener.accept().await?;
         info!("Client {:?} connected", addr);
         let tls = acceptor.clone();
-        let stream = tls.accept(stream).await?;
-        let stream = ProstServerStream::new(stream, service.clone());
-        tokio::spawn(async move { stream.process().await });
+
+        let svr = service.clone();
+        // let stream = ProstServerStream::new(stream);
+        // tokio::spawn(async move { stream.process().await });
+
+        // yamux server handle stream
+        tokio::spawn(async move {
+            let stream = tls.accept(stream).await.unwrap();
+            YamuxCtrl::new_server(stream, None, move |stream| {
+                let svc1 = svr.clone();
+                async move {
+                    let stream = ProstServerStream::new(stream.compat(), svc1.clone());
+                    stream.process().await.unwrap();
+                    Ok(())
+                }
+            });
+        });
     }
 }

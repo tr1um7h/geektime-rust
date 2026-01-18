@@ -13,7 +13,7 @@ async fn main() -> Result<()> {
     let mut client = ProstClientStream::new(stream);
 
     let cmd = CommandRequest::new_hset("table1", "hello", "world".into());
-    let resp = client.execute(cmd).await?;
+    let resp = client.execute_unary(&cmd).await?;
     info!("Got response: {:?}", resp);
 
     Ok(())

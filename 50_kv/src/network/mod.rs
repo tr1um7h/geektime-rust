@@ -5,7 +5,9 @@ mod stream_result;
 mod tls;
 
 pub use frame::{FrameCoder, read_frame};
+pub use multiplex::YamuxCtrl;
 pub use stream::ProstStream;
+pub use stream_result::StreamResult;
 pub use tls::{TlsClientConnector, TlsServerAcceptor};
 
 use futures::{SinkExt, StreamExt};
@@ -34,23 +36,7 @@ where
         }
     }
 
-    async fn send(&mut self, msg: CommandResponse) -> Result<(), KvError> {
-        //TODO: use LengthDelimitedCodec
-        // msg -> bytes -> framedCodec
-        self.inner.send(&msg).await?;
-        Ok(())
-    }
-
-    async fn recv(&mut self) -> Result<CommandRequest, KvError> {
-        // frameCodec -> bytes -> msg
-        match self.inner.next().await {
-            Some(Ok(req)) => {
-                return Ok(req);
-            }
-            Some(Err(e)) => return Err(e.into()),
-            None => return Err(KvError::FrameError),
-        }
-    }
+    // 因为支持 Sink, 这里不需要 send/recv
 
     // jchen: 这里接口变化了
     pub async fn process(mut self) -> Result<(), KvError> {
@@ -71,7 +57,7 @@ where
 
 impl<S> ProstClientStream<S>
 where
-    S: AsyncRead + AsyncWrite + Unpin + Send,
+    S: AsyncRead + AsyncWrite + Unpin + Send + 'static,
 {
     pub fn new(stream: S) -> Self {
         Self {
@@ -79,13 +65,26 @@ where
         }
     }
 
-    pub async fn execute(&mut self, cmd: CommandRequest) -> Result<CommandResponse, KvError> {
+    pub async fn execute_unary(
+        &mut self,
+        cmd: &CommandRequest,
+    ) -> Result<CommandResponse, KvError> {
         let stream = &mut self.inner;
-        stream.send(&cmd).await?;
+        stream.send(cmd).await?;
+
         match stream.next().await {
             Some(v) => v,
             None => Err(KvError::Internal("Didnot get any response".into())),
         }
+    }
+
+    pub async fn execute_streaming(self, cmd: &CommandRequest) -> Result<StreamResult, KvError> {
+        let mut stream = self.inner;
+        stream.send(cmd).await?;
+
+        stream.close().await?;
+
+        StreamResult::new(stream).await
     }
 }
 
@@ -169,14 +168,14 @@ mod tests {
         // 发送 HSET，等待回应
 
         let cmd = CommandRequest::new_hset("t1", "k1", "v1".into());
-        let res = client.execute(cmd).await.unwrap();
+        let res = client.execute_unary(&cmd).await.unwrap();
 
         // 第一次 HSET 服务器应该返回 None
         assert_res_ok(&res, &[Value::default()], &[]);
 
         // 再发一个 HSET
         let cmd = CommandRequest::new_hget("t1", "k1");
-        let res = client.execute(cmd).await?;
+        let res = client.execute_unary(&cmd).await?;
 
         // 服务器应该返回上一次的结果
         assert_res_ok(&res, &["v1".into()], &[]);
@@ -193,12 +192,12 @@ mod tests {
 
         let v: Value = Bytes::from(vec![0u8; 16384]).into();
         let cmd = CommandRequest::new_hset("t2", "k2", v.clone().into());
-        let res = client.execute(cmd).await?;
+        let res = client.execute_unary(&cmd).await?;
 
         assert_res_ok(&res, &[Value::default()], &[]);
 
         let cmd = CommandRequest::new_hget("t2", "k2");
-        let res = client.execute(cmd).await?;
+        let res = client.execute_unary(&cmd).await?;
 
         assert_res_ok(&res, &[v.into()], &[]);
 
