@@ -1,6 +1,7 @@
 mod frame;
 mod multiplex;
 mod stream;
+mod stream_result;
 mod tls;
 
 pub use frame::{FrameCoder, read_frame};
@@ -36,7 +37,7 @@ where
     async fn send(&mut self, msg: CommandResponse) -> Result<(), KvError> {
         //TODO: use LengthDelimitedCodec
         // msg -> bytes -> framedCodec
-        self.inner.send(msg).await?;
+        self.inner.send(&msg).await?;
         Ok(())
     }
 
@@ -51,11 +52,17 @@ where
         }
     }
 
+    // jchen: 这里接口变化了
     pub async fn process(mut self) -> Result<(), KvError> {
-        while let Ok(cmd) = self.recv().await {
+        let stream = &mut self.inner;
+        while let Some(Ok(cmd)) = stream.next().await {
             info!("Got a new command: {:?}", cmd);
-            let res = self.service.execute(cmd);
-            self.send(res).await?;
+            let mut res = self.service.execute(cmd);
+            while let Some(data) = res.next().await {
+                // 目前 data 是 Arc，
+                // 所以我们 send 最好用 &CommandResponse
+                stream.send(&data).await.unwrap();
+            }
         }
 
         Ok(())
@@ -74,7 +81,7 @@ where
 
     pub async fn execute(&mut self, cmd: CommandRequest) -> Result<CommandResponse, KvError> {
         let stream = &mut self.inner;
-        stream.send(cmd).await?;
+        stream.send(&cmd).await?;
         match stream.next().await {
             Some(v) => v,
             None => Err(KvError::Internal("Didnot get any response".into())),

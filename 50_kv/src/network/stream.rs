@@ -48,7 +48,7 @@ where
     }
 }
 
-impl<S, In, Out> Sink<Out> for ProstStream<S, In, Out>
+impl<S, In, Out> Sink<&Out> for ProstStream<S, In, Out>
 where
     S: AsyncRead + AsyncWrite + Unpin,
     In: Unpin + Send,
@@ -63,7 +63,7 @@ where
         Poll::Ready(Ok(()))
     }
 
-    fn start_send(self: std::pin::Pin<&mut Self>, item: Out) -> Result<(), Self::Error> {
+    fn start_send(self: std::pin::Pin<&mut Self>, item: &Out) -> Result<(), Self::Error> {
         let this = self.get_mut();
         item.encode_frame(&mut this.wbuf)?;
 
@@ -150,7 +150,7 @@ mod tests {
         let mut stream = ProstStream::<_, CommandRequest, CommandRequest>::new(stream);
         let cmd = CommandRequest::new_hdel("t1", "k1");
 
-        stream.send(cmd.clone()).await?;
+        stream.send(&cmd).await?;
 
         if let Some(Ok(s)) = stream.next().await {
             assert_eq!(s, cmd);

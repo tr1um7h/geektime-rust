@@ -44,6 +44,12 @@ impl CommandResponse {
     pub fn format(&self) -> String {
         format!("{:?}", self)
     }
+
+    pub fn ok() -> Self {
+        let mut result = CommandResponse::default();
+        result.status = StatusCode::OK.as_u16() as _;
+        result
+    }
 }
 
 impl Kvpair {

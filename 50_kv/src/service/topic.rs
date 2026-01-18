@@ -111,6 +111,8 @@ impl Topic for Arc<Broadcaster> {
 
 #[cfg(test)]
 mod tests {
+    use std::convert::TryInto;
+
     use crate::assert_res_ok;
 
     use super::*;

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use bytes::Bytes;
 use futures::prelude::*;
-use kv::{CommandRequest, CommandResponse, Service, ServiceInner, SledDb};
+use kv::{CommandRequest, Service, ServiceInner, SledDb};
 use prost::Message;
 use tokio::net::TcpListener;
 use tokio_util::codec::{Framed, LengthDelimitedCodec};
@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
             while let Some(Ok(buf)) = stream.next().await {
                 let cmd = CommandRequest::decode(buf).unwrap();
                 info!("Got a new command: {:?}", cmd);
-                let resp: CommandResponse = svc.execute(cmd);
+                let resp = svc.execute(cmd).next().await.unwrap();
                 let msg = Bytes::from(resp.encode_to_vec());
                 stream.send(msg).await.unwrap();
             }
