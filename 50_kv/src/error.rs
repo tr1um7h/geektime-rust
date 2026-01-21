@@ -34,6 +34,9 @@ pub enum KvError {
     #[error("Failed to access sled db")]
     SledError(#[from] sled::Error),
 
+    #[error("Parse config error")]
+    ConfigError(#[from] toml::de::Error),
+
     #[error("Failed to tls")]
     TlsError(#[from] rustls::TLSError),
 

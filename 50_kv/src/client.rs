@@ -2,8 +2,9 @@ use std::time::Duration;
 
 use anyhow::Result;
 use futures::StreamExt;
-use kv::{CommandRequest, KvError, ProstClientStream, TlsClientConnector, YamuxCtrl};
-use tokio::{net::TcpStream, time};
+use kv::{ClientConfig, start_client_with_config};
+use kv::{CommandRequest, KvError, ProstClientStream};
+use tokio::time;
 use tokio_util::compat::Compat;
 use tracing::info;
 
@@ -11,20 +12,8 @@ use tracing::info;
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
 
-    let addr = "127.0.0.1:9527";
-    // 连接服务器
-    let stream = TcpStream::connect(addr).await?;
-
-    let client_cert = include_str!("../fixtures/client.cert");
-    let client_key = include_str!("../fixtures/client.key");
-    let ca_cert = include_str!("../fixtures/ca.cert");
-    let client_identity = Some((client_cert, client_key));
-
-    let connector = TlsClientConnector::new("kvserver.acme.inc", client_identity, Some(ca_cert))?;
-    let stream = connector.connect(stream).await?;
-
-    // yamux client handle stream
-    let mut ctrl = YamuxCtrl::new_client(stream, None);
+    let config: ClientConfig = toml::from_str(include_str!("../fixtures/client.conf"))?;
+    let mut ctrl = start_client_with_config(&config).await?;
 
     let channel = "lobby";
     start_publishing(ctrl.open_stream().await?, channel)?;
@@ -46,7 +35,7 @@ async fn main() -> Result<()> {
     let id = stream_res.id;
 
     // unsubscribe
-    start_unsubscribe(ctrl.open_stream().await?, channel, id);
+    let _ = start_unsubscribe(ctrl.open_stream().await?, channel, id)?;
 
     // no method named next
     // you need to import trait

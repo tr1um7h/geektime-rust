@@ -74,7 +74,7 @@ mod tests {
 
         // publish 时，这个 subscription 已经失效，所以会被删除
         let cmd = CommandRequest::new_publish("lobby", vec!["hello".into()]);
-        dispatch_stream(cmd, topic.clone());
+        let _ = dispatch_stream(cmd, topic.clone());
         time::sleep(Duration::from_millis(10)).await;
 
         // 如果再尝试删除，应该返回 KvError

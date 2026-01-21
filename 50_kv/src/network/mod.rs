@@ -14,22 +14,23 @@ use futures::{SinkExt, StreamExt};
 use tokio::io::{AsyncRead, AsyncWrite};
 use tracing::info;
 
-use crate::{CommandRequest, CommandResponse, KvError, Service};
+use crate::{CommandRequest, CommandResponse, KvError, Service, Storage};
 
-pub struct ProstServerStream<S> {
+pub struct ProstServerStream<S, Store> {
     inner: ProstStream<S, CommandRequest, CommandResponse>,
-    service: Service,
+    service: Service<Store>,
 }
 
 pub struct ProstClientStream<S> {
     inner: ProstStream<S, CommandResponse, CommandRequest>,
 }
 
-impl<S> ProstServerStream<S>
+impl<S, Store> ProstServerStream<S, Store>
 where
     S: AsyncRead + AsyncWrite + Unpin + Send,
+    Store: Storage,
 {
-    pub fn new(stream: S, service: Service) -> Self {
+    pub fn new(stream: S, service: Service<Store>) -> Self {
         Self {
             inner: ProstStream::new(stream),
             service: service,
