@@ -2,6 +2,7 @@ use futures::{Future, TryStreamExt, future};
 use std::marker::PhantomData;
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio_util::compat::{Compat, FuturesAsyncReadCompatExt, TokioAsyncReadCompatExt};
+use tracing::instrument;
 use yamux::{Config, Connection, ConnectionError, Control, Mode, WindowUpdateMode};
 
 /// Yamux 控制结构
@@ -31,6 +32,7 @@ where
     }
 
     // 创建 YamuxCtrl
+    #[instrument(name = "yamux_ctrl_new", skip_all)]
     fn new<F, Fut>(stream: S, config: Option<Config>, is_client: bool, f: F) -> Self
     where
         F: FnMut(yamux::Stream) -> Fut,
@@ -63,6 +65,7 @@ where
     }
 
     /// 打开一个新的 stream
+    #[instrument(skip_all)]
     pub async fn open_stream(&mut self) -> Result<Compat<yamux::Stream>, ConnectionError> {
         let stream = self.ctrl.open_stream().await?;
         Ok(stream.compat())

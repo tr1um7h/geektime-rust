@@ -3,7 +3,7 @@ use crate::{
 };
 use futures::stream;
 use std::sync::Arc;
-use tracing::debug;
+use tracing::{debug, instrument};
 
 mod common_service;
 mod topic;
@@ -41,6 +41,7 @@ impl<Store> Clone for Service<Store> {
 }
 
 impl<Store: Storage> Service<Store> {
+    #[instrument(name = "service_execute", skip_all)]
     pub fn execute(&self, cmd: CommandRequest) -> StreamingResponse {
         debug!("Got request: {:?}", cmd);
         self.inner.on_received.notify(&cmd);

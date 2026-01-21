@@ -11,7 +11,10 @@ use tokio::net::TcpStream;
 use tokio::runtime::Builder;
 use tokio::time;
 use tokio_rustls::client::TlsStream;
-use tracing::info;
+use tracing::{info, span};
+use tracing_subscriber::EnvFilter;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 async fn start_server() -> Result<()> {
     let addr = "127.0.0.1:9999";
@@ -67,6 +70,21 @@ async fn start_publishers(topic: &'static str, values: &'static [&'static str]) 
 
 fn pubsub(c: &mut Criterion) {
     // tracing_subscriber::fmt::init();
+    let tracer = opentelemetry_jaeger::new_pipeline()
+        .with_service_name("kv-bench")
+        .with_max_packet_size(9_216)
+        .install_simple()
+        .unwrap();
+    let opentelemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+
+    tracing_subscriber::registry()
+        .with(EnvFilter::from_default_env())
+        .with(opentelemetry)
+        .init();
+
+    let root = span!(tracing::Level::INFO, "app_start", work_utils = 2);
+    let _enter = root.enter();
+
     // 创建 Tokio runtime
     let runtime = Builder::new_multi_thread()
         .worker_threads(4)
