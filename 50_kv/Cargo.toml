@@ -37,7 +37,13 @@ yamux = "0.9"
 [dev-dependencies]
 async-prost = "0.4.0"
 certify = "0.3"
+criterion = { version = "0.3", features = ["async_futures", "async_tokio", "html_reports"] } # benchmark
+rand = "0.8"
 tempfile = "3.24.0"
 
 [build-dependencies]
 prost-build = "=0.10.4"  # 需要保持 prost, async-prost 一致
+
+[[bench]]
+name = "pubsub"
+harness = false

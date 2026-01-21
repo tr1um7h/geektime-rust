@@ -5,6 +5,8 @@ mod pb;
 mod service;
 mod storage;
 
+use std::time::Duration;
+
 pub use config::*;
 pub use error::KvError;
 pub use network::*;
@@ -13,7 +15,10 @@ pub use service::*;
 pub use storage::*;
 
 use anyhow::Result;
-use tokio::net::{TcpListener, TcpStream};
+use tokio::{
+    net::{TcpListener, TcpStream},
+    time,
+};
 use tokio_rustls::client;
 use tokio_util::compat::FuturesAsyncReadCompatExt;
 use tracing::info;
@@ -63,6 +68,7 @@ async fn start_tls_server<Store: Storage + Send + Sync + 'static>(
 
         let svc = service.clone();
         tokio::spawn(async move {
+            // time::sleep(Duration::from_millis(100)).await;
             let stream = tls.accept(stream).await.unwrap();
             YamuxCtrl::new_server(stream, None, move |stream| {
                 let svc1 = svc.clone();
