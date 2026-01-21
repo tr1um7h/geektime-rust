@@ -46,17 +46,17 @@ impl TlsClientConnector {
             config.set_single_client_cert(certs, key)?;
         }
 
-        // 加载本地信任的根证书链
-        config.root_store = match rustls_native_certs::load_native_certs() {
-            Ok(store) | Err((Some(store), _)) => store,
-            Err((None, error)) => return Err(error.into()),
-        };
-
         // 如果有签署服务器的 CA 证书，则加载它，这样服务器证书不在根证书链
         // 但是这个 CA 证书能验证它，也可以
         if let Some(cert) = server_ca {
             let mut buf = Cursor::new(cert);
             config.root_store.add_pem_file(&mut buf).unwrap();
+        } else {
+            // 加载本地信任的根证书链
+            config.root_store = match rustls_native_certs::load_native_certs() {
+                Ok(store) | Err((Some(store), _)) => store,
+                Err((None, error)) => return Err(error.into()),
+            };
         }
 
         Ok(Self {

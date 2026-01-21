@@ -37,6 +37,7 @@ tracing-subscriber = { version = "0.2", features = ["chrono", "env-filter", "jso
 tracing-opentelemetry = "0.15"
 yamux = "0.9"
 regex = { version = "1.12.2", features = ["unicode-case"] }
+tracing-appender = "0.1"
 
 [dev-dependencies]
 async-prost = "0.4.0"
